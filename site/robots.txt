@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://tex-cars.com/sitemap.xml

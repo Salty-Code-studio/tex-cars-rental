@@ -1,0 +1,10 @@
+# the app is its own git repo (and node_modules/build are huge)
+app/
+# os / editor junk
+.DS_Store
+**/.DS_Store
+*.log
+# local dev artifacts (if any leak in)
+.next/
+.dev-db/
+node_modules/

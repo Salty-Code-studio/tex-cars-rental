@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Proposal · Tex Cars &amp; Leasing | saltycodestudio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --sand:#F2EBDD; --sand-soft:#FBF7EF; --teal:#0E3A40; --teal-soft:#1C5159;
+    --coral:#FF6F59; --surf:#4FA8C9; --ink:#1C2B2E; --line:#e3dccb; --mute:#6b7775;
+    --font-display:"Space Grotesk",system-ui,sans-serif;
+    --font-body:"Inter",system-ui,sans-serif;
+    --font-mono:"JetBrains Mono",ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{margin:0;background:var(--sand);color:var(--ink);font-family:var(--font-body);line-height:1.6;font-size:15px}
+  .sheet{max-width:860px;margin:0 auto;background:var(--sand-soft);min-height:100vh;box-shadow:0 20px 60px rgba(14,58,64,.12)}
+  .pad{padding:48px 56px}
+  h1,h2,h3{font-family:var(--font-display);color:var(--teal);letter-spacing:-.02em;line-height:1.15;margin:0}
+  h1{font-size:2.1rem}
+  h2{font-size:1.25rem;margin:0 0 .4rem}
+  p{margin:.5rem 0}
+  a{color:var(--teal)}
+  .mono{font-family:var(--font-mono);font-size:.78rem;letter-spacing:.02em}
+
+  /* header */
+  .top{background:var(--teal);color:var(--sand);display:flex;justify-content:space-between;align-items:center;padding:26px 56px}
+  .brand{display:flex;align-items:center;gap:14px}
+  .brand .mark{width:54px;height:34px;flex:0 0 auto}
+  .brand .name{font-family:var(--font-display);font-weight:700;font-size:1.15rem;letter-spacing:-.01em}
+  .brand .name b{color:var(--coral);font-weight:700}
+  .top .meta{text-align:right;color:#cfe0df;font-size:.8rem}
+  .top .meta b{color:var(--sand);display:block;font-size:.95rem;font-family:var(--font-display)}
+
+  /* title block */
+  .hero{padding:40px 56px 8px}
+  .eyebrow{font-family:var(--font-mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.18em;color:var(--coral);font-weight:500}
+  .hero h1{margin:.5rem 0 .3rem}
+  .hero .for{color:var(--mute);font-size:1rem}
+  .lead{font-size:1.02rem;color:var(--teal-soft);max-width:62ch}
+
+  section{padding:22px 56px}
+  .label{font-family:var(--font-mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.16em;color:var(--surf);font-weight:500;margin-bottom:10px}
+
+  /* phase cards */
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px 22px}
+  .card .tag{font-family:var(--font-mono);font-size:.7rem;color:var(--coral);text-transform:uppercase;letter-spacing:.12em}
+  .card h3{font-size:1.05rem;margin:.25rem 0 .5rem}
+  ul{margin:.4rem 0;padding-left:1.1rem}
+  li{margin:.32rem 0}
+  li::marker{color:var(--surf)}
+
+  /* pricing */
+  .price-wrap{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:4px}
+  .price{background:var(--teal);color:var(--sand);border-radius:16px;padding:24px 26px}
+  .price.alt{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .price .k{font-family:var(--font-mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.14em;opacity:.85}
+  .price .v{font-family:var(--font-display);font-size:2.4rem;font-weight:700;line-height:1.1;margin:.3rem 0}
+  .price.alt .v{color:var(--teal)}
+  .price .sub{font-size:.85rem;opacity:.85}
+  .price.alt .sub{color:var(--mute)}
+  .valuebox{margin-top:16px;background:#fff;border:1px dashed var(--surf);border-radius:12px;padding:14px 18px;font-size:.9rem;color:var(--teal-soft)}
+  .valuebox b{color:var(--teal)}
+
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:30px}
+  .extras li{display:flex;justify-content:space-between;gap:12px;border-bottom:1px dashed var(--line);padding:.4rem 0}
+  .extras .amt{font-family:var(--font-mono);color:var(--teal);white-space:nowrap}
+
+  .steps{counter-reset:s;list-style:none;padding:0;margin:.5rem 0}
+  .steps li{counter-increment:s;position:relative;padding-left:40px;margin:.6rem 0}
+  .steps li::before{content:counter(s);position:absolute;left:0;top:-2px;width:26px;height:26px;border-radius:50%;background:var(--coral);color:#fff;font-family:var(--font-display);font-weight:600;display:flex;align-items:center;justify-content:center;font-size:.85rem}
+
+  .terms{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 20px;font-size:.9rem}
+  .terms b{color:var(--teal)}
+
+  .foot{background:var(--teal);color:var(--sand);padding:30px 56px;margin-top:24px}
+  .foot .name{font-family:var(--font-display);font-size:1.1rem}
+  .foot a{color:var(--coral)}
+  .sigline{color:#cfe0df;font-size:.9rem;margin-top:6px}
+
+  @media (max-width:640px){
+    .cards,.price-wrap,.twocol{grid-template-columns:1fr}
+    .pad,.hero,section,.top,.foot{padding-left:24px;padding-right:24px}
+  }
+  @media print{
+    body{background:#fff;font-size:12.5px}
+    .sheet{box-shadow:none;max-width:none}
+    section,.hero{padding-top:14px;padding-bottom:14px}
+    .card,.price,.terms,.valuebox{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <!-- Header -->
+  <div class="top">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 120 70" aria-label="saltycodestudio mark">
+        <path d="M10 40 q 13 -18 26 0 t 26 0" fill="none" stroke="#F2EBDD" stroke-width="9" stroke-linecap="round"/>
+        <path d="M112 18 L86 40 L112 62" fill="none" stroke="#FF6F59" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="name">salty<b>code</b>studio</span>
+    </div>
+    <div class="meta">
+      <b>Proposal</b>
+      Ref TEX-2026-01<br/>17 June 2026
+    </div>
+  </div>
+
+  <!-- Title -->
+  <div class="hero">
+    <span class="eyebrow">Website &amp; booking platform</span>
+    <h1>Tex Cars &amp; Leasing</h1>
+    <p class="for">Prepared for the owner, Tex Cars &amp; Leasing, Aruba</p>
+    <p class="lead">Here is everything we have built for you, and a simple way to launch it and keep it running. One price to go live, one monthly plan to host and look after it. No per booking fees, and the platform is yours.</p>
+  </div>
+
+  <!-- What we built -->
+  <section>
+    <div class="label">What we have built</div>
+    <div class="cards">
+      <div class="card">
+        <span class="tag">Phase 1 · live</span>
+        <h3>Your website</h3>
+        <ul>
+          <li>A fast, modern site in four languages: English, Dutch, Spanish and Papiamento</li>
+          <li>Prices in the right currency automatically: florin for local visitors, US dollars for everyone else</li>
+          <li>Your real fleet, WhatsApp booking, an inquiry form and an Aruba travel guide</li>
+          <li>Built to be found on Google, fast on phones, and easy to read</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="tag">Phase 2 · ready</span>
+        <h3>Your booking &amp; operations portal</h3>
+        <ul>
+          <li>Customers book a car type online and pay a reservation fee through secure Stripe checkout, in US dollars</li>
+          <li>A visual planning board: every car is a row by its plate, drag a rental to move it, add walk in rentals, schedule carwashes and maintenance</li>
+          <li>Reports: revenue, how booked the fleet is, and which cars earn the most</li>
+          <li>Strong security: two step login, encrypted customer licence details, no double bookings</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Investment -->
+  <section>
+    <div class="label">Your investment</div>
+    <div class="price">
+      <div class="k">Build &amp; launch · one time</div>
+      <div class="v">€7,750</div>
+      <div class="sub">The full website and booking portal, set up with your real fleet and rates, your domain, go live support and a training session.</div>
+    </div>
+    <p style="margin:18px 0 10px;font-weight:600;color:var(--teal);font-family:var(--font-display)">Ongoing support, pick the option that suits you</p>
+    <div class="price-wrap">
+      <div class="price alt">
+        <div class="k">Care plan · monthly</div>
+        <div class="v">€250<span style="font-size:1rem;font-weight:500">/month</span></div>
+        <div class="sub">Hosting, security updates, backups, monitoring, support and small changes, all included. Month to month, cancel any time.</div>
+      </div>
+      <div class="price alt">
+        <div class="k">Consultation · hourly</div>
+        <div class="v">€100<span style="font-size:1rem;font-weight:500">/hour</span></div>
+        <div class="sub">Prefer pay as you go? We help whenever you need it and bill by the hour. Hosting is arranged separately at cost.</div>
+      </div>
+    </div>
+    <div class="valuebox">
+      A custom platform like this normally costs <b>€18,000 or more</b> to build, and rental software you rent by the month runs <b>€90 to €230 every month</b> with no ownership. Your price reflects a long term partnership, not a one off project.
+    </div>
+  </section>
+
+  <!-- What's included -->
+  <section>
+    <div class="label">What is included</div>
+    <div class="twocol">
+      <div>
+        <h2>In the build</h2>
+        <ul>
+          <li>The complete website and booking portal described above</li>
+          <li>Setup with your real 34 car fleet, classes and rates</li>
+          <li>Your domain connected (tex-cars.com and the booking app)</li>
+          <li>Payment setup with your Stripe account</li>
+          <li>A walkthrough so you and your team know the dashboard</li>
+          <li>Go live testing across all four languages</li>
+        </ul>
+      </div>
+      <div>
+        <h2>In the care plan</h2>
+        <ul>
+          <li>Hosting and all the infrastructure it runs on</li>
+          <li>Security patches and monitoring</li>
+          <li>Daily backups of your bookings and customers</li>
+          <li>Support by email and WhatsApp</li>
+          <li>Small changes, fixes and content updates</li>
+          <li>One feature tweak each month included</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Optional extras -->
+  <section>
+    <div class="label">Optional extras</div>
+    <ul class="extras" style="list-style:none;padding:0">
+      <li><span>Professional fleet photos, taken and placed on the site</span><span class="amt">from €350</span></li>
+      <li><span>Each additional language</span><span class="amt">€225</span></li>
+      <li><span>New features beyond the care plan (loyalty, multi location, and more)</span><span class="amt">€100 / hour</span></li>
+    </ul>
+  </section>
+
+  <!-- Why custom -->
+  <section>
+    <div class="label">Why a platform of your own</div>
+    <ul>
+      <li><b>You own it.</b> No software rental that climbs every year, and no commission on each booking.</li>
+      <li><b>It fits exactly how you work.</b> Your languages, florin and dollars, walk ins, carwashes and maintenance, all in one board.</li>
+      <li><b>Your customer data stays yours.</b> Names, licences and bookings live in your database, not a third party's.</li>
+    </ul>
+  </section>
+
+  <!-- Get live -->
+  <section>
+    <div class="label">How we get live</div>
+    <ol class="steps">
+      <li>You approve this proposal.</li>
+      <li>You set up a Stripe account for payouts and point your domain to us. We help with both.</li>
+      <li>We configure, test and launch. Usually one to two weeks.</li>
+      <li>We train you on the dashboard and hand it over.</li>
+    </ol>
+    <p style="font-size:.9rem;color:var(--mute)"><b style="color:var(--teal)">What we need from you:</b> the tex-cars.com domain, a Stripe account, your business and insurance details, and your real car photos when they are ready.</p>
+  </section>
+
+  <!-- Terms -->
+  <section>
+    <div class="label">Terms</div>
+    <div class="terms">
+      <b>Payment.</b> 50% to start, 50% at go live. The care plan is billed monthly from launch, month to month, cancel any time with 30 days notice.<br/>
+      <b>Validity.</b> This proposal is valid until 17 July 2026.<br/>
+      <b>Currency.</b> All amounts are in euros (EUR).
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <div class="foot">
+    <div class="brand" style="margin-bottom:8px">
+      <svg class="mark" viewBox="0 0 120 70" aria-label="saltycodestudio mark" style="width:46px;height:30px">
+        <path d="M10 40 q 13 -18 26 0 t 26 0" fill="none" stroke="#F2EBDD" stroke-width="9" stroke-linecap="round"/>
+        <path d="M112 18 L86 40 L112 62" fill="none" stroke="#FF6F59" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="name" style="font-size:1.05rem">salty<b>code</b>studio</span>
+    </div>
+    <div class="sigline">Web &amp; software studio · Aruba · <a href="mailto:info@playaculture.com">info@playaculture.com</a></div>
+    <div class="sigline" style="margin-top:10px">Thank you for trusting us with Tex Cars. We are ready when you are.</div>
+  </div>
+
+</div>
+</body>
+</html>
