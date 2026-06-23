@@ -1,23 +1,27 @@
 /* ============================================
    tokens.css — Tex Cars brand design tokens
-   Palette sourced from the official logo:
-   Blue #0044FF · Orange #FF4600 · Navy #15192F
+   Brand identity (from the logo): Blue · Orange · Navy.
+   The UI palette below is a softened, more premium take on those
+   brand colors: a deeper cobalt instead of electric blue, a warmer
+   coral instead of hot orange, and calmer gradients/glows. The logo
+   keeps its original bright colors; the site simply sits quieter
+   around it. Logo source values live in brand-kit/colors/colors.md.
    ============================================ */
 :root {
-  /* ---- Brand ---- */
-  --brand-blue:   #0044FF;
-  --brand-blue-600:#0036CC;
-  --brand-blue-700:#0a2db0;
-  --brand-orange: #FF4600;
-  --brand-orange-600:#E23E00;
+  /* ---- Brand (softened UI palette) ---- */
+  --brand-blue:   #2348C7;
+  --brand-blue-600:#1C3AA1;
+  --brand-blue-700:#152C7A;
+  --brand-orange: #F15F2C;
+  --brand-orange-600:#D84E1F;
   --brand-navy:   #15192F;
   --brand-black:  #0a0c16;
   --white:        #FFFFFF;
 
   /* ---- Tints / neutrals ---- */
-  --blue-50:   #EEF3FF;
-  --blue-100:  #DCE6FF;
-  --orange-50: #FFF1EC;
+  --blue-50:   #EFF3FC;
+  --blue-100:  #DCE5F6;
+  --orange-50: #FBF2EE;
   --ink:       #15192F;
   --ink-soft:  #4a5170;
   --ink-mute:  #828aa6;
@@ -25,11 +29,11 @@
   --surface:   #f7f8fc;
   --surface-2: #eef1f8;
 
-  /* ---- Gradients / glows ---- */
-  --grad-hero: radial-gradient(120% 120% at 80% -10%, #1f5bff 0%, #0044FF 38%, #0a2db0 100%);
-  --grad-band: linear-gradient(120deg, #0044FF 0%, #0a2db0 100%);
-  --glow-orange: 0 18px 50px -18px rgba(255,70,0,.55);
-  --glow-blue:   0 18px 50px -18px rgba(0,68,255,.45);
+  /* ---- Gradients / glows (softened: cobalt settling into navy) ---- */
+  --grad-hero: radial-gradient(120% 120% at 80% -10%, #3157CC 0%, #2348C7 42%, #15192F 100%);
+  --grad-band: linear-gradient(120deg, #2348C7 0%, #15192F 100%);
+  --glow-orange: 0 18px 50px -18px rgba(241,95,44,.32);
+  --glow-blue:   0 18px 50px -18px rgba(35,72,199,.30);
 
   /* ---- Typography ---- */
   --font-display: "Anton", "Archivo", system-ui, sans-serif;

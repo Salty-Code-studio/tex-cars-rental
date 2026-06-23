@@ -177,7 +177,7 @@
 
   /* ---------- Date-range picker ---------- */
   const pickup = $('#f-pickup'), ret = $('#f-return'), dayCount = $('#daycount');
-  const todayISO = () => new Date().toISOString().split('T')[0];
+  const todayISO = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Aruba' }).format(new Date());
   const daysLabel = (n) => ({
     en: `${n} day${n>1?'s':''} rental`, nl: `${n} dag${n>1?'en':''} huur`,
     es: `alquiler de ${n} día${n>1?'s':''}`, pap: `${n} dia di hür`
