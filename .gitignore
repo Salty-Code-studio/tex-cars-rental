@@ -8,3 +8,6 @@ app/
 .next/
 .dev-db/
 node_modules/
+
+# raw source photos (1GB) — not for GitHub; site/ has optimized copies
+brand-kit/photography/
