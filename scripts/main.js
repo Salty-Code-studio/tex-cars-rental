@@ -4,7 +4,7 @@
    ============================================ */
 (() => {
   const CFG = window.TEX_CONFIG || {};
-  const WA_NUMBER = CFG.waNumber || '2975642825'; // ⚠️ confirm live WhatsApp with owner
+  const WA_NUMBER = CFG.waNumber || '2975945454'; // ⚠️ confirm live WhatsApp with owner
   // Currency follows the language: Aruban florin for Papiamento (locals),
   // US dollars for English / Dutch / Spanish (visitors). Re-rendered on
   // langchange, so prices flip with the language toggle.
