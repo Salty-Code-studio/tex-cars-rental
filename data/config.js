@@ -18,9 +18,11 @@
    3. Smoke-test all four languages after the flip.
    ============================================ */
 window.TEX_CONFIG = {
-  bookingEnabled: true,
+  bookingEnabled: false,
   // Where the booking app lives. LOCAL dev = http://localhost:3000 (the running
-  // Phase 2 app). At go-live, change this one line to https://app.tex-cars.com.
+  // Phase 2 app). At go-live, change this one line to the deployed app URL.
+  // Interim (2026-07-09): booking disabled for the static GitHub Pages demo so
+  // CTAs fall back to WhatsApp; flip true + set the Vercel app URL once live.
   bookingUrl: "http://localhost:3000",
   waNumber: "2975642825", // single source for every WhatsApp link on the site
   // Currency is chosen by LANGUAGE in main.js (priceCfg): Aruban florin (Afl.)
