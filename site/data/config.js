@@ -24,7 +24,7 @@ window.TEX_CONFIG = {
   // Interim (2026-07-09): booking disabled for the static GitHub Pages demo so
   // CTAs fall back to WhatsApp; flip true + set the Vercel app URL once live.
   bookingUrl: "http://localhost:3000",
-  waNumber: "2975642825", // single source for every WhatsApp link on the site
+  waNumber: "2975945454", // single source for every WhatsApp link on the site
   // Currency is chosen by LANGUAGE in main.js (priceCfg): Aruban florin (Afl.)
   // for Papiamento — locals — and US dollars ($) for English / Dutch / Spanish
   // — visitors. Each car in fleet.js carries both price lists.
