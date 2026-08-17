@@ -1,31 +1,32 @@
 # Image credits
 
-## Real Tex Cars photography (owner-provided, 2026-06-22)
-These are the owner's own photos, resized for web from the originals in
-`brand-kit/photography/`:
+## Real Tex Cars photography (owner-provided)
 
-**Hero / header**
+**Hero / header** (June 2026 shoot, originals in `brand-kit/photography/`)
 - `hero-lighthouse.jpg` — California Lighthouse at sunset (from `lighthouse.jpg`)
 - `hero-cars.jpg` — Tex Cars on the Aruba coast (from `cars.png`)
 - `hero-anchor.jpg` — the blue anchor monument (from `ancor.jpg`)
 
-**Fleet (real cars, correctly matched)**
-- `car-ford-figo.jpg` — gold Ford Figo (from `DSC07067`)
-- `car-hyundai-accent.jpg` — white Hyundai Accent (from `DSC07134`)
-- `car-kia-rio.jpg` — silver Kia Rio (from `DSC07066`)
+**Fleet** (August 2026 set, originals in `brand-kit/photography/fleet-2026-08-12/`)
+All six fleet cards now use the owner's real cars, shot in one consistent
+coast style. Resized/cropped to 1200x800 for web:
+- `car-hyundai-i10.jpg` — red Hyundai i10
+- `car-ford-figo.jpg` — white Ford Figo
+- `car-suzuki-baleno.jpg` — green Suzuki Baleno
+- `car-hyundai-accent.jpg` — white Hyundai Accent
+- `car-chevrolet-aveo.jpg` — grey Chevrolet Aveo
+- `car-kia-rio.jpg` — grey Kia Rio
 
-## Still placeholders (Pexels, free license)
-The June 2026 photo shoot only contained three cars (Ford Figo, Hyundai Accent,
-Kia Rio). These three models were NOT photographed, so they still use stock
-placeholders chosen for the closest body style, and the fleet section keeps its
-"photos are representative" flag:
-- `car-economy.jpg` (hatchback) → **Hyundai i10**, **Suzuki Baleno**
-- `car-compact.jpg` (sedan) → **Chevrolet Aveo**
+The August set replaced the June shots of the Figo, Accent, and Rio so the
+whole grid shares one backdrop. Three extra shots (two more i10 generations
+and a Suzuki wagon) are archived in `fleet-2026-08-12/` unused, ready if
+more cards are ever added.
 
-⚠️ **To finish:** shoot the i10, Baleno, and Aveo in the same coast/beauty-shot
-style and drop them in, then point those `data/fleet.js` entries at the new files
-and the disclaimer can be removed.
+The "photos are representative" disclaimer has been removed from the fleet
+section — every card is the real car now.
 
-Other unused stock (`car-suv.jpg`, `car-suv2.jpg`, `car-4x4.jpg`, `car-van.jpg`)
-remain from the original class-based set. `car-placeholder.svg` is the built-in
-fallback used if an image fails to load.
+## Remaining stock (Pexels, free license, currently unused)
+- `car-economy.jpg`, `car-compact.jpg`, `car-suv.jpg`, `car-suv2.jpg`,
+  `car-4x4.jpg`, `car-van.jpg` — from the original class-based set, kept as
+  spares. `car-placeholder.svg` is the built-in fallback used if an image
+  fails to load.
