@@ -12,15 +12,15 @@
 
    The full fleet is ~34 cars (mostly Hyundai i10/Accent, Ford Figo,
    Kia Rio, Chevrolet Aveo, Suzuki); these cards show one of each model
-   per class. ⚠️ Photos are still representative stock — swap in the
-   owner's real car photos when available.
+   per class. All six cards use the owner's real car photos
+   (Aug 2026 set, see assets/img/CREDITS.md).
    ============================================ */
 window.TEX_FLEET = [
-  { id: "eco-1", slug: "hyundai-i10",   class: "Economy", name: "Hyundai i10",    seats: 4, transmission: "Automatic", ac: true, doors: 4, priceDay: 50, priceWeek: 300, priceMonth: 1150, usdDay: 35, usdWeek: 210, usdMonth: 700, deposit: 500, usdDeposit: 250, status: "active", image: "assets/img/car-economy.jpg" },
+  { id: "eco-1", slug: "hyundai-i10",   class: "Economy", name: "Hyundai i10",    seats: 4, transmission: "Automatic", ac: true, doors: 4, priceDay: 50, priceWeek: 300, priceMonth: 1150, usdDay: 35, usdWeek: 210, usdMonth: 700, deposit: 500, usdDeposit: 250, status: "active", image: "assets/img/car-hyundai-i10.jpg" },
   { id: "eco-2", slug: "ford-figo",     class: "Economy", name: "Ford Figo",      seats: 5, transmission: "Automatic", ac: true, doors: 5, priceDay: 55, priceWeek: 330, priceMonth: 1300, usdDay: 40, usdWeek: 240, usdMonth: 800, deposit: 500, usdDeposit: 250, status: "active", image: "assets/img/car-ford-figo.jpg" },
-  { id: "eco-3", slug: "suzuki-baleno", class: "Economy", name: "Suzuki Baleno",  seats: 5, transmission: "Automatic", ac: true, doors: 4, priceDay: 40, priceWeek: 240, priceMonth: 900,  usdDay: 30, usdWeek: 180, usdMonth: 600, deposit: 500, usdDeposit: 250, status: "active", image: "assets/img/car-economy.jpg" },
+  { id: "eco-3", slug: "suzuki-baleno", class: "Economy", name: "Suzuki Baleno",  seats: 5, transmission: "Automatic", ac: true, doors: 4, priceDay: 40, priceWeek: 240, priceMonth: 900,  usdDay: 30, usdWeek: 180, usdMonth: 600, deposit: 500, usdDeposit: 250, status: "active", image: "assets/img/car-suzuki-baleno.jpg" },
   { id: "comp-1", slug: "hyundai-accent", class: "Compact", name: "Hyundai Accent", seats: 5, transmission: "Automatic", ac: true, doors: 4, priceDay: 60, priceWeek: 350, priceMonth: 1300, usdDay: 40, usdWeek: 240, usdMonth: 800, deposit: 500, usdDeposit: 250, status: "active", image: "assets/img/car-hyundai-accent.jpg" },
-  { id: "comp-2", slug: "chevrolet-aveo", class: "Compact", name: "Chevrolet Aveo", seats: 5, transmission: "Automatic", ac: true, doors: 4, priceDay: 55, priceWeek: 330, priceMonth: 1200, usdDay: 38, usdWeek: 225, usdMonth: 750, deposit: 500, usdDeposit: 250, status: "active", image: "assets/img/car-compact.jpg" },
+  { id: "comp-2", slug: "chevrolet-aveo", class: "Compact", name: "Chevrolet Aveo", seats: 5, transmission: "Automatic", ac: true, doors: 4, priceDay: 55, priceWeek: 330, priceMonth: 1200, usdDay: 38, usdWeek: 225, usdMonth: 750, deposit: 500, usdDeposit: 250, status: "active", image: "assets/img/car-chevrolet-aveo.jpg" },
   { id: "comp-3", slug: "kia-rio",        class: "Compact", name: "Kia Rio",        seats: 5, transmission: "Automatic", ac: true, doors: 4, priceDay: 55, priceWeek: 330, priceMonth: 1200, usdDay: 38, usdWeek: 225, usdMonth: 750, deposit: 500, usdDeposit: 250, status: "active", image: "assets/img/car-kia-rio.jpg" },
 ];
 
