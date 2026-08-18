@@ -19,10 +19,9 @@
    ============================================ */
 window.TEX_CONFIG = {
   bookingEnabled: true,
-  // Where the booking app lives. LIVE since 2026-08-18 on Cloudflare
-  // (temporary workers.dev URL; swap to app.tex-cars.com at the domain
-  // cutover). Reservation mode: customers reserve online, pay at pickup.
-  bookingUrl: "https://tex-cars-app.saltycodestudio-site.workers.dev",
+  // Where the booking app lives. LIVE on the branded domain since the
+  // 2026-08-18 zone cutover. Reservation mode: reserve online, pay at pickup.
+  bookingUrl: "https://app.tex-cars.com",
   waNumber: "2975945454", // single source for every WhatsApp link on the site
   // Currency is chosen by LANGUAGE in main.js (priceCfg): Aruban florin (Afl.)
   // for Papiamento — locals — and US dollars ($) for English / Dutch / Spanish
