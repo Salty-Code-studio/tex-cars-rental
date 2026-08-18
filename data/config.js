@@ -18,12 +18,11 @@
    3. Smoke-test all four languages after the flip.
    ============================================ */
 window.TEX_CONFIG = {
-  bookingEnabled: false,
-  // Where the booking app lives. LOCAL dev = http://localhost:3000 (the running
-  // Phase 2 app). At go-live, change this one line to the deployed app URL.
-  // Interim (2026-07-09): booking disabled for the static GitHub Pages demo so
-  // CTAs fall back to WhatsApp; flip true + set the Vercel app URL once live.
-  bookingUrl: "http://localhost:3000",
+  bookingEnabled: true,
+  // Where the booking app lives. LIVE since 2026-08-18 on Cloudflare
+  // (temporary workers.dev URL; swap to app.tex-cars.com at the domain
+  // cutover). Reservation mode: customers reserve online, pay at pickup.
+  bookingUrl: "https://tex-cars-app.saltycodestudio-site.workers.dev",
   waNumber: "2975945454", // single source for every WhatsApp link on the site
   // Currency is chosen by LANGUAGE in main.js (priceCfg): Aruban florin (Afl.)
   // for Papiamento — locals — and US dollars ($) for English / Dutch / Spanish
