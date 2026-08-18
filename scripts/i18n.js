@@ -6,15 +6,16 @@
    ============================================ */
 (() => {
   const KEY = 'tex_lang';
-  const SUPPORTED = ['en', 'nl', 'es', 'pap'];
+  // ES + PAP paused until native review; translations stay in the markup.
+  // Re-enable: restore ['en', 'nl', 'es', 'pap'], the two buttons in
+  // index.html, and the es/pap navigator checks below.
+  const SUPPORTED = ['en', 'nl'];
 
   const DEFAULT = (() => {
     const stored = localStorage.getItem(KEY);
     if (stored && SUPPORTED.includes(stored)) return stored;
     const nav = (navigator.language || 'en').toLowerCase();
     if (nav.startsWith('nl')) return 'nl';
-    if (nav.startsWith('es')) return 'es';
-    if (nav.startsWith('pap')) return 'pap';
     return 'en';
   })();
 
