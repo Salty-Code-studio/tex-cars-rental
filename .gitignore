@@ -11,3 +11,6 @@ node_modules/
 
 # raw source photos (1GB) — not for GitHub; site/ has optimized copies
 brand-kit/photography/
+
+# prod database dumps (customer PII) — must NEVER reach this public repo
+backups/
