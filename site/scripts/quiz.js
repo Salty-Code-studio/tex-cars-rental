@@ -203,6 +203,7 @@
       prevMonth: 'Previous month', nextMonth: 'Next month',
       errCar: 'Tap the car you would like.',
       errDates: 'Tap a pick-up day and a return day on the calendar.',
+      errDatePast: 'That pick-up day has passed. Tap a new one.',
       errSpan: 'Ninety days is the longest we can take here. Ask Tex on WhatsApp for a longer rental.',
       errDelivery: 'Tell us where you would like the car.',
       errName: 'We need a name so Tex knows who to answer.',
@@ -219,6 +220,7 @@
       prevMonth: 'Vorige maand', nextMonth: 'Volgende maand',
       errCar: 'Tik de auto aan die je wil.',
       errDates: 'Tik een ophaaldag en een terugbrengdag aan op de kalender.',
+      errDatePast: 'Die ophaaldag is al voorbij. Tik een nieuwe aan.',
       errSpan: 'Negentig dagen is het langste dat hier kan. Vraag Tex op WhatsApp naar een langere huur.',
       errDelivery: 'Vertel ons waar je de auto wil hebben.',
       errName: 'We hebben een naam nodig, zodat Tex weet wie hij antwoordt.',
@@ -324,7 +326,14 @@
     if (kind === 'dates') {
       const days = daysBetween(s.startDate, s.endDate);
       if (!s.startDate || !s.endDate || days <= 0) return L.errDates;
-      if (s.startDate < todayISO) return L.errDates;
+      /* Reachable in ordinary use: a customer picks today as pick-up, then
+         sits on this step across the Aruba midnight boundary. todayISO is
+         recomputed fresh here, but the calendar's disabled-day rendering is
+         not refreshed until the next render pass, so the stale selection is
+         still shown highlighted. errDates ("Tap a pick-up day...") would
+         misdescribe that: the customer did tap a day, it just aged out from
+         under them. This message says what actually happened instead. */
+      if (s.startDate < todayISO) return L.errDatePast;
       if (s.startDate > addDaysISO(todayISO, MAX_AHEAD_DAYS)) return L.errDates;
       if (days > MAX_SPAN_DAYS) return L.errSpan;
       return '';
@@ -409,11 +418,16 @@
 
   /* Keeps every role=radio option group (today just delivery, step 3) in
      sync: aria-checked="true" on the chosen button, "false" on the rest,
-     so a screen reader group never gets stuck announcing "not checked". */
+     so a screen reader group never gets stuck announcing "not checked".
+     The is-sel class is toggled on the same elements in the same pass, so
+     the visible state (main.css:481's border and background) and the ARIA
+     state can never drift apart. */
   function syncRadioGroup(container, selectedValue, dataAttr) {
     if (!container) return;
     container.querySelectorAll('[role="radio"]').forEach((btn) => {
-      btn.setAttribute('aria-checked', btn.dataset[dataAttr] === selectedValue ? 'true' : 'false');
+      const on = btn.dataset[dataAttr] === selectedValue;
+      btn.setAttribute('aria-checked', on ? 'true' : 'false');
+      btn.classList.toggle('is-sel', on);
     });
   }
 

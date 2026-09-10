@@ -390,22 +390,40 @@ test('validateStep asks for both dates and a return day after the pick-up day', 
   assert.equal(pure.validateStep('dates', { ...base, endDate: '' }, TODAY, 'en'), msg);
   assert.equal(pure.validateStep('dates', { ...base, startDate: '' }, TODAY, 'en'), msg);
   assert.equal(pure.validateStep('dates', { ...base, endDate: base.startDate }, TODAY, 'en'), msg);
+  const nlMsg = 'Tik een ophaaldag en een terugbrengdag aan op de kalender.';
+  assert.equal(pure.validateStep('dates', { ...base, endDate: '' }, TODAY, 'nl'), nlMsg);
+  assert.equal(pure.validateStep('dates', { ...base, startDate: '' }, TODAY, 'nl'), nlMsg);
+  assert.equal(pure.validateStep('dates', { ...base, endDate: base.startDate }, TODAY, 'nl'), nlMsg);
 });
 
 test('validateStep enforces the three date rules the spec sets', () => {
-  assert.equal(pure.validateStep('dates', { ...base, startDate: '2026-09-08', endDate: '2026-09-12' }, TODAY, 'en'),
-    'Tap a pick-up day and a return day on the calendar.', 'a start before today in Aruba is rejected');
   assert.equal(pure.validateStep('dates', { ...base, startDate: '2027-09-10', endDate: '2027-09-14' }, TODAY, 'en'),
     'Tap a pick-up day and a return day on the calendar.', 'more than 365 days ahead is rejected');
   assert.equal(pure.validateStep('dates', { ...base, startDate: '2026-09-20', endDate: '2026-12-20' }, TODAY, 'en'),
     'Ninety days is the longest we can take here. Ask Tex on WhatsApp for a longer rental.');
+  assert.equal(pure.validateStep('dates', { ...base, startDate: '2026-09-20', endDate: '2026-12-20' }, TODAY, 'nl'),
+    'Negentig dagen is het langste dat hier kan. Vraag Tex op WhatsApp naar een langere huur.');
   assert.equal(pure.validateStep('dates', { ...base, startDate: '2026-09-20', endDate: '2026-12-19' }, TODAY, 'en'),
     '', 'exactly ninety days is allowed');
+});
+
+/* Task 9 quality review finding: a start date earlier than today is
+   reachable in ordinary use (pick today, then sit on this step across the
+   Aruba midnight boundary), so it needs its own message rather than the
+   generic errDates, which would misdescribe what happened: the customer
+   did tap a day, it just aged out from under them. */
+test('validateStep tells the customer their pick-up day has passed, not the generic dates message', () => {
+  assert.equal(pure.validateStep('dates', { ...base, startDate: '2026-09-08', endDate: '2026-09-12' }, TODAY, 'en'),
+    'That pick-up day has passed. Tap a new one.');
+  assert.equal(pure.validateStep('dates', { ...base, startDate: '2026-09-08', endDate: '2026-09-12' }, TODAY, 'nl'),
+    'Die ophaaldag is al voorbij. Tik een nieuwe aan.');
 });
 
 test('validateStep asks where the car should go', () => {
   assert.equal(pure.validateStep('delivery', { ...base, delivery: '' }, TODAY, 'en'), 'Tell us where you would like the car.');
   assert.equal(pure.validateStep('delivery', { ...base, delivery: 'desk' }, TODAY, 'en'), 'Tell us where you would like the car.');
+  assert.equal(pure.validateStep('delivery', { ...base, delivery: '' }, TODAY, 'nl'), 'Vertel ons waar je de auto wil hebben.');
+  assert.equal(pure.validateStep('delivery', { ...base, delivery: 'desk' }, TODAY, 'nl'), 'Vertel ons waar je de auto wil hebben.');
 });
 
 test('validateStep wants a name of two to sixty characters', () => {
@@ -414,6 +432,8 @@ test('validateStep wants a name of two to sixty characters', () => {
   assert.equal(pure.validateStep('who', { ...base, name: 'M' }, TODAY, 'en'), msg);
   assert.equal(pure.validateStep('who', { ...base, name: 'x'.repeat(61) }, TODAY, 'en'), msg);
   assert.equal(pure.validateStep('who', { ...base, name: 'Mo' }, TODAY, 'en'), '');
+  assert.equal(pure.validateStep('who', { ...base, name: 'x'.repeat(60) }, TODAY, 'en'), '', 'exactly sixty characters passes');
+  assert.equal(pure.validateStep('who', { ...base, name: '' }, TODAY, 'nl'), 'We hebben een naam nodig, zodat Tex weet wie hij antwoordt.');
 });
 
 test('validateStep requires a WhatsApp number, per D5', () => {
