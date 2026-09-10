@@ -275,19 +275,26 @@
   let steps = [], dots = [], current = 0;
   let els = {};
 
-  function show(i) {
+  /* moveFocus is false for the very first paint. Announcing and focusing a
+     step is right when the CUSTOMER moved, and wrong on arrival: it drags
+     keyboard and screen reader focus off the page's natural entry point,
+     skipping the logo and the language toggle before anyone has touched
+     anything, and it fires an aria-live announcement about a step change
+     that never happened. Scrolling to the top on arrival is equally
+     pointless, since the browser is already there. */
+  function show(i, moveFocus = true) {
     current = Math.max(0, Math.min(steps.length - 1, i));
     steps.forEach((s, k) => s.classList.toggle('is-active', k === current));
     dots.forEach((d, k) => d.classList.toggle('on', k <= current));
     clearError();
     const active = steps[current];
-    if (active) {
+    if (active && moveFocus) {
       const heading = active.querySelector('.q-title');
       const announce = document.getElementById('qStepAnnounce');
       if (announce) announce.textContent = heading ? heading.textContent : '';
       active.focus();
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (moveFocus) window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function setError(msg) {
@@ -355,7 +362,7 @@
       b.addEventListener('click', () => show(current - 1)));
 
     render();
-    show(0);
+    show(0, false);
   }
 
   /* Everything the language can change is re-rendered here, which is why
