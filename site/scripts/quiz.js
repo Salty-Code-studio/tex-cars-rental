@@ -108,6 +108,14 @@
     });
   }
 
+  /* CAREFUL: m here is ZERO based, so 2 is March, matching Date.UTC and the
+     calendar's own month cursor. Three lines up, fmtDate's m is the ONE based
+     month straight off the ISO string, which is why it subtracts 1. Two live
+     conventions for the same letter in one file, so read the call site before
+     you copy either. Date.UTC rolls an out of range month over silently
+     (month 12 gives January of the next year, which the calendar relies on),
+     so passing a one based month here does not throw, it just titles the
+     wrong month. */
   function monthLabel(y, m, lang) {
     return new Date(Date.UTC(y, m, 1)).toLocaleDateString(locale(lang), {
       month: 'long', year: 'numeric', timeZone: 'UTC',
