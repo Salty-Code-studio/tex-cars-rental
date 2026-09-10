@@ -145,3 +145,64 @@ test('normalisePhone rejects anything that is not 8 to 17 digits', () => {
   assert.equal(pure.normalisePhone(''), '');
   assert.equal(pure.normalisePhone(undefined), '');
 });
+
+const REQ = {
+  carKey: 'hyundai-i10',
+  startDate: '2026-03-14',
+  endDate: '2026-03-20',
+  delivery: 'hotel',
+  deliveryNote: 'Divi Village, arriving 11:00',
+  name: 'Monischa',
+};
+
+/* Verbatim from spec section 6. If this test needs editing, the copy
+   changed and Mo and Tex have to approve it again. */
+test('buildWaText matches the spec example line for line', () => {
+  assert.equal(pure.buildWaText(REQ, 'en'), [
+    "Hi Tex, I'd like to rent the Hyundai i10 (Economy).",
+    'From: Sat 14 Mar',
+    'Until: Fri 20 Mar (6 days)',
+    'Where: bring it to my hotel',
+    'Note: Divi Village, arriving 11:00',
+    'Name: Monischa',
+    'Estimate I saw: $210',
+  ].join('\n'));
+});
+
+test('buildWaText has a Dutch shape with the same seven rows', () => {
+  assert.equal(pure.buildWaText(REQ, 'nl'), [
+    'Hoi Tex, ik wil graag de Hyundai i10 (Economy) huren.',
+    'Van: za 14 mrt',
+    'Tot: vr 20 mrt (6 dagen)',
+    'Waar: breng hem naar mijn hotel',
+    'Opmerking: Divi Village, arriving 11:00',
+    'Naam: Monischa',
+    'Schatting die ik zag: $210',
+  ].join('\n'));
+});
+
+test('buildWaText drops the note row when there is no note', () => {
+  const text = pure.buildWaText({ ...REQ, deliveryNote: '' }, 'en');
+  assert.equal(text.includes('Note:'), false);
+  assert.equal(text.split('\n').length, 6);
+});
+
+test('buildWaText writes the other two delivery choices', () => {
+  assert.ok(pure.buildWaText({ ...REQ, delivery: 'airport' }, 'en').includes('Where: bring it to the airport'));
+  assert.ok(pure.buildWaText({ ...REQ, delivery: 'pickup' }, 'en').includes('Where: I collect it at Tex'));
+  assert.ok(pure.buildWaText({ ...REQ, delivery: 'airport' }, 'nl').includes('Waar: breng hem naar het vliegveld'));
+  assert.ok(pure.buildWaText({ ...REQ, delivery: 'pickup' }, 'nl').includes('Waar: ik haal hem op bij Tex'));
+});
+
+test('buildWaText says one day, not one days', () => {
+  const one = { ...REQ, endDate: '2026-03-15' };
+  assert.ok(pure.buildWaText(one, 'en').includes('(1 day)'));
+  assert.ok(pure.buildWaText(one, 'nl').includes('(1 dag)'));
+});
+
+test('waHref points at the configured number and encodes the text', () => {
+  const href = pure.waHref(REQ, 'en');
+  assert.ok(href.startsWith('https://wa.me/2975945454?text='), href);
+  assert.equal(decodeURIComponent(href.split('?text=')[1]), pure.buildWaText(REQ, 'en'));
+  assert.equal(href.includes('\n'), false, 'newlines must be percent encoded');
+});

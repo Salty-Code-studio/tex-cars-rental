@@ -130,10 +130,55 @@
     return /^\+?\d{8,17}$/.test(cleaned) ? cleaned : '';
   }
 
+  /* ---------- the prefilled WhatsApp message ----------
+     Built from state the browser already holds. This message IS the
+     request: it is the only copy of what the customer chose, and it lives
+     in their chat with Tex from the moment they press send in WhatsApp.
+     Nothing on this page keeps a second copy. */
+  const WA_WHERE = {
+    en: { airport: 'bring it to the airport', hotel: 'bring it to my hotel', pickup: 'I collect it at Tex' },
+    nl: { airport: 'breng hem naar het vliegveld', hotel: 'breng hem naar mijn hotel', pickup: 'ik haal hem op bij Tex' },
+  };
+
+  function buildWaText(req, lang) {
+    const nl = lang === 'nl';
+    const car = carBySlug(req.carKey);
+    const days = daysBetween(req.startDate, req.endDate);
+    const est = estimateFor(car, days, lang);
+    const P = priceCfg(lang);
+    const from = fmtDate(req.startDate, lang);
+    const until = fmtDate(req.endDate, lang);
+    const where = (nl ? WA_WHERE.nl : WA_WHERE.en)[req.delivery];
+    const lines = nl
+      ? [
+          `Hoi Tex, ik wil graag de ${car.name} (${car.class}) huren.`,
+          `Van: ${from}`,
+          `Tot: ${until} (${days} ${days === 1 ? 'dag' : 'dagen'})`,
+          `Waar: ${where}`,
+          req.deliveryNote ? `Opmerking: ${req.deliveryNote}` : null,
+          `Naam: ${req.name}`,
+          est ? `Schatting die ik zag: ${money(est, P)}` : null,
+        ]
+      : [
+          `Hi Tex, I'd like to rent the ${car.name} (${car.class}).`,
+          `From: ${from}`,
+          `Until: ${until} (${days} ${days === 1 ? 'day' : 'days'})`,
+          `Where: ${where}`,
+          req.deliveryNote ? `Note: ${req.deliveryNote}` : null,
+          `Name: ${req.name}`,
+          est ? `Estimate I saw: ${money(est, P)}` : null,
+        ];
+    return lines.filter(Boolean).join('\n');
+  }
+
+  const waHref = (req, lang) =>
+    `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(buildWaText(req, lang))}`;
+
   const PURE = {
     isoOf, arubaTodayISO, addDaysISO, daysBetween,
     carBySlug, priceCfg, money, estimateFor,
     fmtDate, monthLabel, normalisePhone,
+    buildWaText, waHref,
     MAX_SPAN_DAYS, MAX_AHEAD_DAYS, MAX_AHEAD_MONTHS,
     NOTE_MAX, NOTE_COUNTER_FROM,
   };
