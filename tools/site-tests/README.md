@@ -6,7 +6,7 @@ outside `site/`, so they are version controlled but never reach `gh-pages`.
 
 Run them all:
 
-    node --test tools/site-tests/
+    node --test tools/site-tests/*.test.mjs
 
 Run one file:
 

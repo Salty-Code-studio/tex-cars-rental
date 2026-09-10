@@ -181,7 +181,7 @@ test('the limits match the spec and the app settings', () => {
 - [ ] **Step 2: Run it and see it fail**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
 Expected failure: `Error: ENOENT: no such file or directory, open '.../site/scripts/quiz.js'`.
@@ -266,7 +266,7 @@ outside `site/`, so they are version controlled but never reach `gh-pages`.
 
 Run them all:
 
-    node --test tools/site-tests/
+    node --test tools/site-tests/*.test.mjs
 
 Run one file:
 
@@ -291,7 +291,7 @@ Manual checks are served from `site/`:
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
 Expected: 6 tests pass, 0 fail.
@@ -449,7 +449,7 @@ Then extend the `PURE` object:
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
 Expected: 13 tests pass, 0 fail.
@@ -561,7 +561,7 @@ Extend `PURE` with `fmtDate, monthLabel, normalisePhone`.
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
 Expected: 17 tests pass, 0 fail.
@@ -720,7 +720,7 @@ Extend `PURE` with `buildWaText, waHref`.
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
 Expected: 23 tests pass, 0 fail.
@@ -1064,7 +1064,7 @@ Create `site/book/index.html`:
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
 Expected: 36 tests pass, 0 fail.
@@ -1241,7 +1241,7 @@ Append to the end of `site/styles/main.css`:
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
 Expected: 40 tests pass, 0 fail.
@@ -1484,7 +1484,7 @@ Add a placeholder validator so `boot` does not throw before Task 9 lands. Put it
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
 Expected: 45 tests pass, 0 fail.
@@ -1733,7 +1733,7 @@ Extend `render()` so the language switch redraws the calendar too:
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
 Expected: 56 tests pass, 0 fail.
@@ -1911,7 +1911,7 @@ In `boot`, extend the `els` map and add the step 3 and step 4 bindings, right af
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
 Expected: 64 tests pass, 0 fail.
@@ -2040,7 +2040,7 @@ test('quiz.js opens no new tab and no window', () => {
 - [ ] **Step 2: Run it and see it fail**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
 Expected failure: `TypeError: pure.estimateSentence is not a function`.
@@ -2158,7 +2158,7 @@ Make the last `data-next` land on the send screen with a fresh recap: extend the
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
 Expected: 72 tests pass, 0 fail.
@@ -2279,7 +2279,7 @@ And replace `:39`:
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
 Expected: 76 tests pass, 0 fail.
@@ -2410,7 +2410,7 @@ After this edit `site/index.html` is 41 lines shorter: 2 lines become 1 in the a
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
 Expected: 81 tests pass, 0 fail.
@@ -2540,7 +2540,7 @@ And the fleet card anchor at `:100`:
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
 Expected: 84 tests pass, 0 fail.
@@ -2620,7 +2620,7 @@ In `site/index.html`, on the line that holds `/policies/rental-terms` (`:345` af
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
 Expected: 87 tests pass, 0 fail.
@@ -2728,7 +2728,7 @@ Expected failure: `AssertionError [ERR_ASSERTION]: the quiz takes no money at al
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
 Expected: 89 tests pass, 0 fail. This is the full suite: nothing after this task adds a test.
@@ -2803,7 +2803,7 @@ Serve the site on the local network (`python3 -m http.server 8000 --directory si
 This task edits nothing, so it must leave nothing behind. Two files the whole plan never touches are checked by name, because an earlier draft of this task did edit one of them temporarily:
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 git -C /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental status --short
 git -C /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental diff --stat site/data/config.js site/data/fleet.js
 ```
