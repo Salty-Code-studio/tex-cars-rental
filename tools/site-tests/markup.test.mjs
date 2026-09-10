@@ -265,3 +265,19 @@ test('the sitemap lists the quiz', () => {
   assert.equal((map.match(/<url>/g) || []).length, 5, 'four pages plus the quiz');
   assert.match(map, /<loc>https:\/\/tex-cars\.com\/book\/<\/loc><changefreq>monthly<\/changefreq><priority>0\.9<\/priority>/);
 });
+
+test('the three claims the quiz does not keep are gone', () => {
+  assert.equal(index.includes('reservation fee'), false, 'the quiz takes no money at all');
+  assert.equal(index.includes('reserveringsfee'), false);
+  assert.equal(index.includes('we ask for your license details upfront'), false, 'the quiz asks for no licence');
+  assert.equal(index.includes('rijbewijsgegevens vooraf'), false);
+  assert.equal(index.includes('How does paying online work?'), false);
+});
+
+/* The owner kept every plain "online" claim, because booking through
+   WhatsApp is still online. Only specific broken promises changed. */
+test('the online wording the owner kept is untouched', () => {
+  assert.ok(index.includes('data-book-en="Book online in minutes"'), 'the trust badge stays');
+  assert.ok(index.includes('data-book-en="Book online"'), 'the how it works heading stays');
+  assert.ok(index.includes('book it online in minutes'), 'the fleet section lead stays');
+});
