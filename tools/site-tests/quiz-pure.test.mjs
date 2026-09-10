@@ -206,3 +206,21 @@ test('waHref points at the configured number and encodes the text', () => {
   assert.equal(decodeURIComponent(href.split('?text=')[1]), pure.buildWaText(REQ, 'en'));
   assert.equal(href.includes('\n'), false, 'newlines must be percent encoded');
 });
+
+/* The send screen writes openWa.href on every render pass, including the
+   first one before the customer has tapped a car, and state.carKey starts
+   empty. Without the guard in buildWaText both of these throw a TypeError
+   and take the whole page down at boot. */
+test('buildWaText returns empty rather than throwing when no car is chosen', () => {
+  const nothing = { carKey: '', startDate: '', endDate: '', delivery: 'airport', deliveryNote: '', name: '' };
+  assert.equal(pure.buildWaText(nothing, 'en'), '');
+  assert.equal(pure.buildWaText(nothing, 'nl'), '');
+  assert.equal(pure.buildWaText({ ...nothing, carKey: 'not-in-the-fleet' }, 'en'), '');
+});
+
+test('waHref stays a real WhatsApp link when the message is not composed yet', () => {
+  const nothing = { carKey: '', startDate: '', endDate: '', delivery: 'airport', deliveryNote: '', name: '' };
+  const href = pure.waHref(nothing, 'en');
+  assert.match(href, /^https:\/\/wa\.me\/\d+$/);
+  assert.ok(!href.includes('?text='));
+});

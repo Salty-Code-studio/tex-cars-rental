@@ -143,6 +143,14 @@
   function buildWaText(req, lang) {
     const nl = lang === 'nl';
     const car = carBySlug(req.carKey);
+    /* No car chosen yet, or a stale ?car= slug that is not in the fleet.
+       Return empty rather than throwing: renderSend writes openWa.href on
+       every render pass, including the first one before the customer has
+       tapped anything, and state.carKey starts empty. Throwing here would
+       take the whole page down at boot, which is a far worse failure than
+       the send screen being briefly incomplete. Every sibling helper that
+       resolves a car guards it the same way. */
+    if (!car) return '';
     const days = daysBetween(req.startDate, req.endDate);
     const est = estimateFor(car, days, lang);
     const P = priceCfg(lang);
@@ -171,8 +179,16 @@
     return lines.filter(Boolean).join('\n');
   }
 
-  const waHref = (req, lang) =>
-    `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(buildWaText(req, lang))}`;
+  /* With nothing chosen yet the link is a bare wa.me with no ?text=, so the
+     anchor in the markup is always a real, tappable WhatsApp link. That is
+     the no-JS and half-filled fallback the G1 rule asks for: WhatsApp opens
+     in every case, even if the message has not been composed. */
+  const waHref = (req, lang) => {
+    const text = buildWaText(req, lang);
+    return text
+      ? `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(text)}`
+      : `https://wa.me/${WA_NUMBER}`;
+  };
 
   const PURE = {
     isoOf, arubaTodayISO, addDaysISO, daysBetween,
