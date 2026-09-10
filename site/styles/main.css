@@ -496,7 +496,11 @@ h2.title::after {
 .cal2-nav:hover:not(:disabled) { border-color: var(--brand-blue); color: var(--brand-blue); }
 .cal2-nav:disabled { opacity: .3; cursor: default; }
 .cal2-months { display: grid; grid-template-columns: 1fr; gap: 1.1rem; }
-@media (min-width: 700px) { .cal2-months { grid-template-columns: 1fr 1fr; gap: 1.4rem; } }
+/* Two months side by side only once the card is genuinely wide enough.
+   At 700px the pair shared a 620px capped card and each day cell fell to
+   37px, under the tap guideline on a surface that is still touched.
+   Measured on a real browser at 768px, iPad portrait. */
+@media (min-width: 900px) { .cal2-months { grid-template-columns: 1fr 1fr; gap: 1.4rem; } }
 .cal2-title { font-family: var(--font-display); text-transform: uppercase; font-size: .9rem; letter-spacing: .04em; text-align: center; color: var(--brand-navy); margin-bottom: .4rem; }
 .cal2-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
 .cal2-grid .dow { font-size: .62rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-mute); padding: .3rem 0; }
@@ -526,4 +530,29 @@ h2.title::after {
 
 @media (prefers-reduced-motion: reduce) {
   .q-step.is-active, .q-carcard { animation: none; transition: none; }
+}
+
+/* ---------- Calendar: reach a real 44px tap target on a phone ----------
+   The day cell sets min-height 44px, but width is whatever seven columns
+   divide into. Inside .q-card's padding at a 375px viewport that lands at
+   about 39px, so the cell is 44px tall and 39px wide: still under the
+   guideline on the axis a thumb misses most, and a mis-tap here resets the
+   customer's date range.
+
+   Getting to 44px by trimming .container and .q-card padding site wide would
+   need both down to about 12px, which reads cramped and would change every
+   other card on the site. So instead the calendar alone reclaims the card's
+   horizontal padding on narrow screens. 375px viewport, 1.1rem gutter each
+   side, no card padding: (375 - 35.2 - 12) / 7 = about 46px per cell.
+   Only the grid moves; the card keeps its padding for everything else. */
+@media (max-width: 560px) {
+  .q-card > .cal2 {
+    margin-inline: calc(clamp(1.1rem, 3.5vw, 1.8rem) * -1);
+  }
+  .q-card > .cal2 .cal2-grid {
+    padding-inline: 2px;
+    /* 1px rather than 2px: six gaps give back about 0.9px per cell,
+       which is what takes a 375px viewport from 43.8 over the 44 line. */
+    gap: 1px;
+  }
 }
