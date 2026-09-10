@@ -96,9 +96,36 @@
     return total;
   }
 
+  /* ---------- display formatting ----------
+     Dates are formatted from a UTC instant with timeZone UTC, so a phone
+     sitting on Central European time never renders a day early or late. */
+  const locale = (lang) => (lang === 'nl' ? 'nl-NL' : 'en-GB');
+
+  function fmtDate(iso, lang) {
+    const [y, m, d] = parts(iso);
+    return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(locale(lang), {
+      weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC',
+    });
+  }
+
+  function monthLabel(y, m, lang) {
+    return new Date(Date.UTC(y, m, 1)).toLocaleDateString(locale(lang), {
+      month: 'long', year: 'numeric', timeZone: 'UTC',
+    });
+  }
+
+  /* Spaces, dashes, dots and brackets come out; an optional leading plus
+     and 8 to 17 digits stay. Stored and messaged in this normalised form.
+     Nothing here checks that the number is real or that it is on WhatsApp. */
+  function normalisePhone(raw) {
+    const cleaned = String(raw == null ? '' : raw).replace(/[\s.()-]/g, '');
+    return /^\+?\d{8,17}$/.test(cleaned) ? cleaned : '';
+  }
+
   const PURE = {
     isoOf, arubaTodayISO, addDaysISO, daysBetween,
     carBySlug, priceCfg, money, estimateFor,
+    fmtDate, monthLabel, normalisePhone,
     MAX_SPAN_DAYS, MAX_AHEAD_DAYS, MAX_AHEAD_MONTHS,
     NOTE_MAX, NOTE_COUNTER_FROM,
   };

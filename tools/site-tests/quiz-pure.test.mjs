@@ -114,3 +114,34 @@ test('estimateFor returns null when there is nothing to price', () => {
   assert.equal(pure.estimateFor(null, 6, 'en'), null);
   assert.equal(pure.estimateFor(i10(), -3, 'en'), null);
 });
+
+/* Formatting is asserted in UTC so the result does not depend on the
+   machine running the tests. 2026-03-14 is a Saturday, which is the date
+   the spec's own copy examples use. */
+test('fmtDate renders the short weekday form the copy promises', () => {
+  assert.equal(pure.fmtDate('2026-03-14', 'en'), 'Sat 14 Mar');
+  assert.equal(pure.fmtDate('2026-03-20', 'en'), 'Fri 20 Mar');
+  assert.equal(pure.fmtDate('2026-03-14', 'nl'), 'za 14 mrt');
+  assert.equal(pure.fmtDate('2026-03-20', 'nl'), 'vr 20 mrt');
+});
+
+test('monthLabel titles the two calendar months', () => {
+  assert.equal(pure.monthLabel(2026, 2, 'en'), 'March 2026');
+  assert.equal(pure.monthLabel(2026, 2, 'nl'), 'maart 2026');
+});
+
+test('normalisePhone strips punctuation and keeps the country code', () => {
+  assert.equal(pure.normalisePhone('+297 560 1234'), '+2975601234');
+  assert.equal(pure.normalisePhone('+297-560-1234'), '+2975601234');
+  assert.equal(pure.normalisePhone('(297) 560.1234'), '2975601234');
+  assert.equal(pure.normalisePhone('  +31 6 12 34 56 78  '), '+31612345678');
+});
+
+test('normalisePhone rejects anything that is not 8 to 17 digits', () => {
+  assert.equal(pure.normalisePhone('5601234'), '', 'seven digits is too short');
+  assert.equal(pure.normalisePhone('+' + '1'.repeat(18)), '', 'eighteen digits is too long');
+  assert.equal(pure.normalisePhone('call me'), '');
+  assert.equal(pure.normalisePhone('++2975601234'), '');
+  assert.equal(pure.normalisePhone(''), '');
+  assert.equal(pure.normalisePhone(undefined), '');
+});
