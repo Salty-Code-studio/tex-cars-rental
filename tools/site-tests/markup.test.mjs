@@ -185,3 +185,41 @@ test('quiz.js opens no new tab and no window', () => {
   assert.equal(quiz.includes('window.open'), false);
   assert.equal(/target\s*=\s*['"]_blank['"]/.test(quiz), false);
 });
+
+const index = read('index.html');
+const mainJs = read('scripts/main.js');
+
+test('the homepage inquiry form is gone', () => {
+  assert.equal(index.includes('id="inquiry-form"'), false);
+  for (const id of ['f-name', 'f-email', 'f-pickup', 'f-return', 'f-car', 'f-msg', 'daycount']) {
+    assert.equal(index.includes(`id="${id}"`), false, `${id} belonged to the retired form`);
+  }
+});
+
+/* Spec section 11: one line of copy and one button. Nothing else. */
+test('a short call to action stands where the form stood', () => {
+  assert.match(index, /class="inquiry__cta"/);
+  const start = index.indexOf('class="inquiry__cta"');
+  const cta = index.slice(start, index.indexOf('</div>', start) + 6);
+  assert.equal((cta.match(/<p[\s>]/g) || []).length, 1, 'exactly one line of copy');
+  assert.equal((cta.match(/<a[\s>]/g) || []).length, 1, 'exactly one button');
+  assert.equal(/<h[1-6][\s>]/.test(cta), false, 'no heading: the spec says one line and one button');
+  assert.match(cta, /href="\/book\/"/);
+  assert.ok(cta.includes('data-en="Request a car"'));
+});
+
+test('the aside no longer promises secure online booking', () => {
+  assert.equal(index.includes('secure online booking'), false);
+  assert.equal(index.includes('veilige online boeking'), false);
+});
+
+test('the JavaScript that existed only for that form is gone too', () => {
+  for (const dead of ['renderClassOptions', '#inquiry-form', "$('#f-pickup')", 'daysLabel', 'updateDays']) {
+    assert.equal(mainJs.includes(dead), false, `${dead} served only the retired form`);
+  }
+});
+
+test('the fleet and rates renderers still boot and still follow the language', () => {
+  assert.match(mainJs, /function boot\(\) \{ renderFleet\(\); renderRates\(\); observeReveal\(\); \}/);
+  assert.match(mainJs, /window\.addEventListener\('langchange', \(\) => \{ renderFleet\(\); renderRates\(\); \}\);/);
+});

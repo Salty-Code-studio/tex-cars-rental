@@ -275,8 +275,7 @@
         <div class="inquiry" data-reveal>
           <div class="inquiry__aside">
             <h2 data-en="Reserve your car" data-nl="Reserveer je auto" data-es="Reserva tu auto" data-pap="Reservá bo outo">Reserve your car</h2>
-            <p data-en="Send a request and we'll confirm availability and delivery on WhatsApp. Prefer to chat? Message us directly." data-nl="Stuur een aanvraag; we bevestigen beschikbaarheid en levering via WhatsApp. Liever chatten? Stuur direct een bericht." data-es="Envía una solicitud y confirmamos disponibilidad y entrega por WhatsApp. ¿Prefieres chatear? Escríbenos." data-pap="Mandá un petishon i nos ta konfirmá disponibilidat i entrega via WhatsApp. Bo ke chat? Mandá nos mensahe direkt."
-               data-book-en="Pick your dates and we'll take you straight to secure online booking. Prefer to chat? Message us on WhatsApp." data-book-nl="Kies je data en we brengen je direct naar de veilige online boeking. Liever chatten? Stuur ons een bericht via WhatsApp." data-book-es="Elige tus fechas y te llevamos directo a la reserva segura online. ¿Prefieres chatear? Escríbenos por WhatsApp." data-book-pap="Skohe bo fechanan i nos ta hiba bo direkt na e reservashon online sigur. Bo ke chat? Mandá nos un mensahe via WhatsApp.">Send a request and we'll confirm availability and delivery on WhatsApp.</p>
+            <p data-en="Tell us which car and which days. Tex answers you on WhatsApp, usually within minutes." data-nl="Vertel ons welke auto en welke dagen. Tex antwoordt je op WhatsApp, meestal binnen enkele minuten." data-es="Envía una solicitud y confirmamos disponibilidad y entrega por WhatsApp. ¿Prefieres chatear? Escríbenos." data-pap="Mandá un petishon i nos ta konfirmá disponibilidat i entrega via WhatsApp. Bo ke chat? Mandá nos mensahe direkt.">Tell us which car and which days. Tex answers you on WhatsApp, usually within minutes.</p>
             <div class="inquiry__contact">
               <a href="https://wa.me/2975945454" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24z"/></svg> +297 594 5454</a>
               <a href="https://tex-cars.com" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 010 20 15 15 0 010-20"/></svg> tex-cars.com</a>
@@ -284,50 +283,10 @@
             </div>
           </div>
 
-          <form class="inquiry__form" id="inquiry-form" novalidate>
-            <div class="field--row">
-              <div class="field">
-                <label for="f-name" data-en="Your name" data-nl="Je naam" data-es="Tu nombre" data-pap="Bo nòmber">Your name</label>
-                <input id="f-name" name="name" type="text" required data-en-placeholder="Jane Doe" data-nl-placeholder="Jan Jansen" data-es-placeholder="Juan Pérez" data-pap-placeholder="Bo nòmber" placeholder="Jane Doe" />
-              </div>
-              <div class="field">
-                <label for="f-email" data-en="Email" data-nl="E-mail" data-es="Correo" data-pap="Email">Email</label>
-                <input id="f-email" name="email" type="email" required placeholder="you@email.com" data-en-placeholder="you@email.com" data-nl-placeholder="jij@email.com" data-es-placeholder="tu@email.com" data-pap-placeholder="bo@email.com" />
-              </div>
-            </div>
-
-            <div class="field">
-              <label data-en="When do you need it?" data-nl="Wanneer heb je 'm nodig?" data-es="¿Cuándo lo necesitas?" data-pap="Ki dia bo tin mester di dje?">When do you need it?</label>
-              <div class="daterange">
-                <div class="daterange__cell">
-                  <span class="daterange__tag" data-en="Pick-up" data-nl="Ophalen" data-es="Recogida" data-pap="Buska">Pick-up</span>
-                  <input id="f-pickup" name="pickup" type="date" required />
-                </div>
-                <svg class="daterange__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-                <div class="daterange__cell">
-                  <span class="daterange__tag" data-en="Return" data-nl="Inleveren" data-es="Devolución" data-pap="Debolbé">Return</span>
-                  <input id="f-return" name="return" type="date" required />
-                </div>
-              </div>
-              <p class="daterange__count" id="daycount" hidden></p>
-            </div>
-
-            <div class="field">
-              <label for="f-car" data-en="Car class" data-nl="Autoklasse" data-es="Clase de auto" data-pap="Klase di outo">Car class</label>
-              <select id="f-car" name="car">
-                <option value="" data-en="Choose a class" data-nl="Kies een klasse" data-es="Elige una clase" data-pap="Skohe un klase">Choose a class</option>
-                <!-- class options rendered from the fleet data by main.js -->
-              </select>
-            </div>
-            <div class="field">
-              <label for="f-msg" data-en="Message" data-nl="Bericht" data-es="Mensaje" data-pap="Mensahe">Message</label>
-              <textarea id="f-msg" name="message" data-en-placeholder="Anything we should know?" data-nl-placeholder="Iets dat we moeten weten?" data-es-placeholder="¿Algo que debamos saber?" data-pap-placeholder="Tin algu nos mester sa?" placeholder="Anything we should know?"></textarea>
-            </div>
-            <button type="submit" class="btn btn--primary btn--block btn--lg"
-              data-en="Send request" data-nl="Verstuur aanvraag" data-es="Enviar solicitud" data-pap="Mandá petishon"
-              data-book-en="Continue to booking" data-book-nl="Verder naar boeken" data-book-es="Continuar a la reserva" data-book-pap="Sigui pa reservashon">Send request</button>
-            <p class="form__msg" role="status" aria-live="polite"></p>
-          </form>
+          <div class="inquiry__cta">
+            <p data-en="Pick your car, tap your days, tell us where you want it, and leave your WhatsApp number. Nothing is reserved until Tex confirms it." data-nl="Kies je auto, tik je dagen aan, vertel ons waar je hem wil hebben en laat je WhatsApp nummer achter. Er is niets gereserveerd tot Tex het bevestigt.">Pick your car, tap your days, tell us where you want it, and leave your WhatsApp number. Nothing is reserved until Tex confirms it.</p>
+            <a class="btn btn--primary btn--lg" href="/book/" data-en="Request a car" data-nl="Vraag een auto aan">Request a car</a>
+          </div>
         </div>
       </div>
     </section>

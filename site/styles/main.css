@@ -560,3 +560,7 @@ h2.title::after {
     gap: 1px;
   }
 }
+
+/* ---------- Homepage call to action, where the inquiry form used to be ---------- */
+.inquiry__cta { background: #fff; color: var(--ink); padding: clamp(1.8rem, 4vw, 3rem); display: grid; gap: 1rem; align-content: center; justify-items: start; }
+.inquiry__cta p { color: var(--ink-soft); }
