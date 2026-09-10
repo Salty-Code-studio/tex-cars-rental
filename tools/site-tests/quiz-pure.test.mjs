@@ -448,3 +448,46 @@ test('validateStep checks the name before the phone, so one message shows at a t
   assert.equal(pure.validateStep('who', { ...base, name: '', phone: '' }, TODAY, 'en'),
     'We need a name so Tex knows who to answer.');
 });
+
+const SEND = {
+  carKey: 'hyundai-i10', startDate: '2026-03-14', endDate: '2026-03-20',
+  delivery: 'hotel', deliveryNote: 'Divi Village, arriving 11:00',
+  name: 'Monischa', phone: '+297 560 1234',
+};
+
+/* Verbatim from spec section 5. The word estimate leads the sentence in
+   both languages, and no bare currency figure stands on its own. */
+test('estimateSentence is the exact sentence the customer reads', () => {
+  assert.equal(pure.estimateSentence(SEND, 'en'), 'Estimate: $210 for 6 days. Tex confirms the final price on WhatsApp.');
+  assert.equal(pure.estimateSentence(SEND, 'nl'), 'Schatting: $210 voor 6 dagen. Tex bevestigt de definitieve prijs via WhatsApp.');
+});
+
+test('depositSentence keeps the deposit outside the estimate', () => {
+  assert.equal(pure.depositSentence(SEND, 'en'), 'A refundable deposit of $250 is arranged when you pick the car up. It is not part of this estimate.');
+  assert.equal(pure.depositSentence(SEND, 'nl'), 'Een borg van $250 regel je bij het ophalen. Die valt buiten deze schatting.');
+  assert.equal(pure.depositSentence(SEND, 'pap'), 'A refundable deposit of Afl. 500 is arranged when you pick the car up. It is not part of this estimate.');
+});
+
+test('the words quote and total never reach the customer', () => {
+  for (const lang of ['en', 'nl']) {
+    const both = pure.estimateSentence(SEND, lang) + ' ' + pure.depositSentence(SEND, lang);
+    assert.equal(/quote|total/i.test(both), false, both);
+  }
+});
+
+test('recapValues fills all eight rows', () => {
+  const r = pure.recapValues(SEND, 'en');
+  assert.equal(r.car, 'Hyundai i10 (Economy)');
+  assert.equal(r.from, 'Sat 14 Mar');
+  assert.equal(r.until, 'Fri 20 Mar');
+  assert.equal(r.est, '$210');
+  assert.equal(r.where, 'Bring it to my hotel');
+  assert.equal(r.note, 'Divi Village, arriving 11:00');
+  assert.equal(r.name, 'Monischa');
+  assert.equal(r.phone, '+2975601234', 'the recap shows the normalised number, so the customer can check it before sending');
+});
+
+test('recapValues translates the delivery row', () => {
+  assert.equal(pure.recapValues(SEND, 'nl').where, 'Breng hem naar mijn hotel');
+  assert.equal(pure.recapValues({ ...SEND, delivery: 'pickup' }, 'nl').where, 'Ik haal hem op bij Tex');
+});

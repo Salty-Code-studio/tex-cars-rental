@@ -163,3 +163,25 @@ test('the quiz styles are appended, not interleaved into the existing sheet', ()
   assert.ok(css.indexOf('/* ---------- Quiz page (/book/)') > css.indexOf('@media (prefers-reduced-motion: reduce)'),
     'the quiz block goes at the end of the file');
 });
+
+const quiz = read('scripts/quiz.js');
+
+/* The whole design in one assertion. The quiz is a message composer: the
+   only thing that ever leaves this page is the customer's own tap on a
+   wa.me link. One well meant fetch would quietly undo that. */
+test('the quiz sends nothing anywhere and keeps nothing', () => {
+  for (const forbidden of ['fetch(', 'XMLHttpRequest', 'sendBeacon', 'localStorage', 'document.cookie']) {
+    assert.equal(quiz.includes(forbidden), false, `${forbidden} has no place in a page that stores nothing`);
+  }
+});
+
+test('the send screen rebuilds the anchor href from state every render', () => {
+  const render = quiz.slice(quiz.indexOf('function renderSend('));
+  assert.match(render, /openWa\.href\s*=\s*waHref\(state, l\)/,
+    'the anchor must carry the current answers, not the markup fallback');
+});
+
+test('quiz.js opens no new tab and no window', () => {
+  assert.equal(quiz.includes('window.open'), false);
+  assert.equal(/target\s*=\s*['"]_blank['"]/.test(quiz), false);
+});

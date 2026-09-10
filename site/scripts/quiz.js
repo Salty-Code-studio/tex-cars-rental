@@ -3,7 +3,7 @@
    Four steps, then a send screen. Nothing here reserves a car, and
    nothing here saves, sends or stores anything: the whole file is a pure
    function from four answers to one wa.me link. There is deliberately no
-   fetch, no XMLHttpRequest, no sendBeacon and no localStorage in this
+   network call of any kind and no browser storage of any kind in this
    file. If you are adding one, you are changing the design.
 
    Ported from the Little John Scooters quiz engine, with its three real
@@ -350,13 +350,51 @@
     return '';
   }
 
+  /* ---------- the send screen ---------- */
+  const RECAP_WHERE = {
+    en: { airport: 'Bring it to the airport', hotel: 'Bring it to my hotel', pickup: 'I collect it at Tex' },
+    nl: { airport: 'Breng hem naar het vliegveld', hotel: 'Breng hem naar mijn hotel', pickup: 'Ik haal hem op bij Tex' },
+  };
+
+  function estimateSentence(s, lang) {
+    const car = carBySlug(s.carKey);
+    const days = daysBetween(s.startDate, s.endDate);
+    const est = estimateFor(car, days, lang);
+    if (est === null) return '';
+    return t(lang).estimate(money(est, priceCfg(lang)), t(lang).days(days));
+  }
+
+  /* A footnote, deliberately outside the estimate. */
+  function depositSentence(s, lang) {
+    const car = carBySlug(s.carKey);
+    if (!car) return '';
+    const P = priceCfg(lang);
+    return t(lang).deposit(money(car[P.depositKey], P));
+  }
+
+  function recapValues(s, lang) {
+    const car = carBySlug(s.carKey);
+    const days = daysBetween(s.startDate, s.endDate);
+    const est = estimateFor(car, days, lang);
+    return {
+      car: car ? `${car.name} (${car.class})` : '',
+      from: s.startDate ? fmtDate(s.startDate, lang) : '',
+      until: s.endDate ? fmtDate(s.endDate, lang) : '',
+      est: est === null ? '' : money(est, priceCfg(lang)),
+      where: (lang === 'nl' ? RECAP_WHERE.nl : RECAP_WHERE.en)[s.delivery] || '',
+      note: s.deliveryNote || '',
+      name: s.name || '',
+      phone: normalisePhone(s.phone),
+    };
+  }
+
   const PURE = {
     isoOf, arubaTodayISO, addDaysISO, daysBetween,
     carBySlug, priceCfg, money, estimateFor,
     fmtDate, monthLabel, normalisePhone,
     buildWaText, waHref, carCardsHTML,
     pickDay, hintText, monthBlockHTML, calendarHTML,
-    validateStep,
+    validateStep, estimateSentence, depositSentence, recapValues,
     MAX_SPAN_DAYS, MAX_AHEAD_DAYS, MAX_AHEAD_MONTHS,
     NOTE_MAX, NOTE_COUNTER_FROM,
   };
@@ -416,6 +454,30 @@
     els.cal.innerHTML = calendarHTML(view, state, arubaTodayISO(), lang(), moved);
   }
 
+  function renderSend() {
+    if (!els.recap || !els.recap.rCar) return;
+    const l = lang();
+    const v = recapValues(state, l);
+    els.recap.rCar.textContent = v.car;
+    els.recap.rFrom.textContent = v.from;
+    els.recap.rUntil.textContent = v.until;
+    els.recap.rEst.textContent = v.est;
+    els.recap.rWhere.textContent = v.where;
+    els.recap.rNote.textContent = v.note;
+    els.recap.rName.textContent = v.name;
+    els.recap.rPhone.textContent = v.phone;
+    if (els.estRow) els.estRow.hidden = !v.est;
+    if (els.noteRow) els.noteRow.hidden = !v.note;
+    if (els.estimate) els.estimate.textContent = estimateSentence(state, l);
+    if (els.deposit) els.deposit.textContent = depositSentence(state, l);
+    /* The single send anchor. Its markup href is a plain wa.me link that
+       works with JavaScript off; here it is replaced by the full request,
+       every time this screen is drawn and every time the language changes.
+       There is nothing to await, so there is never a window in which the
+       anchor is stale: by the time the customer can see it, it is right. */
+    if (els.openWa) els.openWa.href = waHref(state, l);
+  }
+
   /* Keeps every role=radio option group (today just delivery, step 3) in
      sync: aria-checked="true" on the chosen button, "false" on the rest,
      so a screen reader group never gets stuck announcing "not checked".
@@ -441,6 +503,17 @@
       noteCount: document.getElementById('qNoteCount'),
       name: document.getElementById('qName'),
       phone: document.getElementById('qPhone'),
+      estimate: document.getElementById('qEstimate'),
+      deposit: document.getElementById('qDeposit'),
+      openWa: document.getElementById('qOpenWa'),
+      recap: {
+        rCar: document.getElementById('rCar'), rFrom: document.getElementById('rFrom'),
+        rUntil: document.getElementById('rUntil'), rEst: document.getElementById('rEst'),
+        rWhere: document.getElementById('rWhere'), rNote: document.getElementById('rNote'),
+        rName: document.getElementById('rName'), rPhone: document.getElementById('rPhone'),
+      },
+      estRow: document.getElementById('rEstRow'),
+      noteRow: document.getElementById('rNoteRow'),
     };
 
     // Arrived from a fleet card: /book/?car=hyundai-i10 preselects it.
@@ -509,6 +582,7 @@
       b.addEventListener('click', () => {
         const msg = validateStep(steps[current].dataset.validate, state, arubaTodayISO(), lang());
         if (msg) { setError(msg); return; }
+        renderSend();
         show(current + 1);
       }));
     document.querySelectorAll('[data-back]').forEach((b) =>
@@ -527,6 +601,7 @@
   function render() {
     renderCars();
     renderCal();
+    renderSend();
     const active = steps[current];
     const box = active && active.querySelector('.q-error');
     if (box && box.textContent) {
