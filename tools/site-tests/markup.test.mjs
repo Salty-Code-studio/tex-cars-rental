@@ -223,3 +223,28 @@ test('the fleet and rates renderers still boot and still follow the language', (
   assert.match(mainJs, /function boot\(\) \{ renderFleet\(\); renderRates\(\); observeReveal\(\); \}/);
   assert.match(mainJs, /window\.addEventListener\('langchange', \(\) => \{ renderFleet\(\); renderRates\(\); \}\);/);
 });
+
+test('no booking anchor is left pointing at the app wizard', () => {
+  assert.equal(index.includes('data-booking-href="/book"'), false,
+    'the bridge rewrite loop must not reach these three anchors any more');
+});
+
+test('the three static call to action anchors go to the local quiz', () => {
+  const anchors = [...index.matchAll(/<a[^>]*data-book-en="[^"]*"[^>]*>/g)].map((m) => m[0]);
+  assert.equal(anchors.length, 3, 'nav, hero and footer');
+  for (const a of anchors) {
+    assert.match(a, /href="\/book\/"/, a);
+    assert.equal(/target\s*=/.test(a), false, 'no new tab: ' + a);
+    assert.equal(/rel\s*=/.test(a), false, 'rel goes with target: ' + a);
+    assert.match(a, /data-en="Request a car"/, a);
+    assert.match(a, /data-nl="Vraag een auto aan"/, a);
+    assert.match(a, /data-book-en="Request a car"/, a);
+    assert.match(a, /data-book-nl="Vraag een auto aan"/, a);
+  }
+});
+
+test('the fleet card links are generated at /book/ with the car slug', () => {
+  assert.match(mainJs, /const bookUrl = \(slug\) => `\/book\/\?car=\$\{encodeURIComponent\(slug\)\}`;/);
+  assert.match(mainJs, /href="\$\{bookUrl\(car\.slug\)\}"/);
+  assert.equal(mainJs.includes('CFG.bookingUrl'), false, 'the fleet cards no longer leave this origin');
+});

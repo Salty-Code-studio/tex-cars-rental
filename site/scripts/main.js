@@ -14,10 +14,9 @@
       : { sym: '$',    day: 'usdDay',   week: 'usdWeek',   month: 'usdMonth' };
   }
   const bookingOn = () => !!CFG.bookingEnabled;
-  const bookUrl = (params = {}) => {
-    const qs = Object.entries(params).filter(([, v]) => v).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-    return `${(CFG.bookingUrl || 'https://app.tex-cars.com').replace(/\/$/, '')}/book${qs ? '?' + qs : ''}`;
-  };
+  // The quiz lives on this site now, at /book/. It is not the app wizard,
+  // so this no longer builds a cross-origin URL out of the old booking config.
+  const bookUrl = (slug) => `/book/?car=${encodeURIComponent(slug)}`;
   const $ = (s, c = document) => c.querySelector(s);
   const $$ = (s, c = document) => Array.from(c.querySelectorAll(s));
 
@@ -97,7 +96,7 @@
               <b>${P.sym} ${car[P.day]}</b><small>${tr('day')}</small>
             </div>
             ${bookingOn()
-              ? `<a class="btn btn--primary" href="${bookUrl({ class: car.class })}" aria-label="${tr('bookOnline')}">
+              ? `<a class="btn btn--primary" href="${bookUrl(car.slug)}" aria-label="${tr('bookOnline')}">
                   ${tr('bookOnline').split(' ')[0]} →
                 </a>`
               : `<a class="btn btn--wa" href="${waLink(msg)}" target="_blank" rel="noopener" aria-label="${tr('reserve')}">
