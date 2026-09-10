@@ -248,3 +248,20 @@ test('the fleet card links are generated at /book/ with the car slug', () => {
   assert.match(mainJs, /href="\$\{bookUrl\(car\.slug\)\}"/);
   assert.equal(mainJs.includes('CFG.bookingUrl'), false, 'the fleet cards no longer leave this origin');
 });
+
+test('the rental terms link matches the policy_type enum', () => {
+  assert.equal(index.includes('/policies/rental-terms'), false, 'the enum has an underscore, not a hyphen');
+  assert.ok(index.includes('data-booking-href="/policies/rental_terms"'));
+});
+
+test('the other two policy links were already right and stay right', () => {
+  assert.ok(index.includes('data-booking-href="/policies/cancellation"'));
+  assert.ok(index.includes('data-booking-href="/policies/privacy"'));
+});
+
+test('the sitemap lists the quiz', () => {
+  const map = read('sitemap.xml');
+  assert.ok(map.includes('<loc>https://tex-cars.com/book/</loc>'));
+  assert.equal((map.match(/<url>/g) || []).length, 5, 'four pages plus the quiz');
+  assert.match(map, /<loc>https:\/\/tex-cars\.com\/book\/<\/loc><changefreq>monthly<\/changefreq><priority>0\.9<\/priority>/);
+});
