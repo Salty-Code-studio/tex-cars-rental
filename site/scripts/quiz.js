@@ -53,8 +53,52 @@
     return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86400000);
   }
 
+  /* ---------- pricing ----------
+     Same currency rule as the homepage, priceCfg() in scripts/main.js:11-15:
+     Papiamento shows Aruban florin, every other language shows US dollars.
+     In practice that is always dollars today, because i18n.js:12 limits the
+     site to en and nl. The full rule is implemented anyway so that
+     re-enabling Papiamento later cannot leave florin customers looking at
+     dollar prices.
+
+     depositKey is the one field main.js's priceCfg does not have. That
+     function returns { sym, day, week, month } and nothing else; the deposit
+     lives per car in fleet.js as deposit (Afl. 500) and usdDeposit ($250).
+     Spec section 5 requires the deposit footnote, so the key is named here
+     rather than picked by a second currency test somewhere else. */
+  const carBySlug = (slug) => FLEET.find((c) => c.slug === slug) || null;
+
+  function priceCfg(lang) {
+    return lang === 'pap'
+      ? { sym: 'Afl.', day: 'priceDay', week: 'priceWeek', month: 'priceMonth', depositKey: 'deposit' }
+      : { sym: '$', day: 'usdDay', week: 'usdWeek', month: 'usdMonth', depositKey: 'usdDeposit' };
+  }
+
+  const money = (amount, P) => (P.sym === '$' ? `$${amount}` : `${P.sym} ${amount}`);
+
+  /* Advisory only. The customer sees this number so the WhatsApp
+     conversation starts from the same figure; nothing is priced from it. */
+  function estimateFor(car, days, lang) {
+    if (!car || !(days > 0)) return null;
+    const P = priceCfg(lang);
+    const dayRate = car[P.day], weekRate = car[P.week], monthRate = car[P.month];
+
+    const months = days >= 30 ? Math.floor(days / 30) : 0;
+    const rest = days - months * 30;
+    const weeks = Math.floor(rest / 7);
+    const restDays = rest - weeks * 7;
+
+    let weekAndDay = weeks * weekRate + restDays * dayRate;
+    if (weekAndDay > (weeks + 1) * weekRate) weekAndDay = (weeks + 1) * weekRate;
+
+    let total = months * monthRate + weekAndDay;
+    if (total > (months + 1) * monthRate) total = (months + 1) * monthRate;
+    return total;
+  }
+
   const PURE = {
     isoOf, arubaTodayISO, addDaysISO, daysBetween,
+    carBySlug, priceCfg, money, estimateFor,
     MAX_SPAN_DAYS, MAX_AHEAD_DAYS, MAX_AHEAD_MONTHS,
     NOTE_MAX, NOTE_COUNTER_FROM,
   };
