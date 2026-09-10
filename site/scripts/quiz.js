@@ -251,11 +251,62 @@
       </button>`).join('');
   }
 
+  /* ---------- the calendar ----------
+     Two months at a time, tap the pick-up day then the return day.
+     Ported from the Little John engine with its three real bugs fixed:
+     today comes from Aruba, cells clear 44px (see main.css), and a mis-tap
+     announces itself instead of silently wiping both dates. */
+  function pickDay(s, iso) {
+    const restarting = !s.startDate || (s.startDate && s.endDate) || iso <= s.startDate;
+    if (restarting) return { startDate: iso, endDate: '', moved: Boolean(s.startDate) };
+    return { startDate: s.startDate, endDate: iso, moved: false };
+  }
+
+  function hintText(s, lang, moved) {
+    const L = t(lang);
+    if (!s.startDate) return L.hintStart;
+    if (!s.endDate) return moved ? L.moved(fmtDate(s.startDate, lang)) : L.hintEnd;
+    const n = daysBetween(s.startDate, s.endDate);
+    return `${fmtDate(s.startDate, lang)} \u2192 ${fmtDate(s.endDate, lang)} \u00b7 ${L.days(n)}`;
+  }
+
+  function monthBlockHTML(y, m, s, todayISO, maxISO, lang) {
+    let html = `<div class="cal2-month"><p class="cal2-title">${esc(monthLabel(y, m, lang))}</p><div class="cal2-grid">`;
+    for (const d of t(lang).dows) html += `<span class="dow">${d}</span>`;
+    const lead = (new Date(Date.UTC(y, m, 1)).getUTCDay() + 6) % 7; // Monday first
+    for (let i = 0; i < lead; i++) html += '<span></span>';
+    const dim = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    for (let d = 1; d <= dim; d++) {
+      const iso = isoOf(y, m, d);
+      let cls = 'cal2-day';
+      if (iso === s.startDate || (s.endDate && iso === s.endDate)) cls += ' edge';
+      else if (s.startDate && s.endDate && iso > s.startDate && iso < s.endDate) cls += ' mid';
+      const off = iso < todayISO || iso > maxISO ? ' disabled' : '';
+      html += `<button type="button" class="${cls}" data-day="${iso}"${off}>${d}</button>`;
+    }
+    return html + '</div></div>';
+  }
+
+  function calendarHTML(view, s, todayISO, lang, moved) {
+    const L = t(lang);
+    const maxISO = addDaysISO(todayISO, MAX_AHEAD_DAYS);
+    const [ty, tm] = parts(todayISO);
+    const delta = (view.y - ty) * 12 + (view.m - (tm - 1));
+    const next = { y: view.m === 11 ? view.y + 1 : view.y, m: (view.m + 1) % 12 };
+    return `<div class="cal2-nav-row">
+        <button type="button" class="cal2-nav" data-cal="-1" aria-label="${L.prevMonth}"${delta <= 0 ? ' disabled' : ''}>&lsaquo;</button>
+        <button type="button" class="cal2-nav" data-cal="1" aria-label="${L.nextMonth}"${delta >= MAX_AHEAD_MONTHS - 1 ? ' disabled' : ''}>&rsaquo;</button>
+      </div>
+      <div class="cal2-months">${monthBlockHTML(view.y, view.m, s, todayISO, maxISO, lang)}${monthBlockHTML(next.y, next.m, s, todayISO, maxISO, lang)}</div>
+      <p class="cal2-hint">${esc(hintText(s, lang, moved))}</p>`;
+  }
+
   const PURE = {
     isoOf, arubaTodayISO, addDaysISO, daysBetween,
     carBySlug, priceCfg, money, estimateFor,
     fmtDate, monthLabel, normalisePhone,
     buildWaText, waHref, carCardsHTML,
+    pickDay, hintText, monthBlockHTML, calendarHTML,
     MAX_SPAN_DAYS, MAX_AHEAD_DAYS, MAX_AHEAD_MONTHS,
     NOTE_MAX, NOTE_COUNTER_FROM,
   };
@@ -271,6 +322,8 @@
     carKey: '', startDate: '', endDate: '',
     delivery: '', deliveryNote: '', name: '', phone: '',
   };
+  const view = { y: 0, m: 0 };
+  let moved = false;   // true right after a mis-tap reset, so the hint says so
 
   let steps = [], dots = [], current = 0;
   let els = {};
@@ -308,6 +361,11 @@
     els.cars.innerHTML = carCardsHTML(FLEET, state.carKey, lang());
   }
 
+  function renderCal() {
+    if (!els.cal) return;
+    els.cal.innerHTML = calendarHTML(view, state, arubaTodayISO(), lang(), moved);
+  }
+
   /* Keeps every role=radio option group (today just delivery, step 3) in
      sync: aria-checked="true" on the chosen button, "false" on the rest,
      so a screen reader group never gets stuck announcing "not checked". */
@@ -330,6 +388,30 @@
     // An unknown or stale slug falls through harmlessly to no selection.
     const wanted = new URLSearchParams(window.location.search).get('car');
     if (wanted && carBySlug(wanted)) state.carKey = wanted;
+
+    const [ty, tm] = arubaTodayISO().split('-').map(Number);
+    view.y = ty; view.m = tm - 1;
+
+    if (els.cal) {
+      els.cal.addEventListener('click', (e) => {
+        const nav = e.target.closest('[data-cal]');
+        if (nav && !nav.disabled) {
+          const step = Number(nav.dataset.cal);
+          const t2 = new Date(Date.UTC(view.y, view.m + step, 1));
+          view.y = t2.getUTCFullYear(); view.m = t2.getUTCMonth();
+          renderCal();
+          return;
+        }
+        const day = e.target.closest('[data-day]');
+        if (!day || day.disabled) return;
+        clearError();
+        const picked = pickDay(state, day.dataset.day);
+        state.startDate = picked.startDate;
+        state.endDate = picked.endDate;
+        moved = picked.moved;
+        renderCal();
+      });
+    }
 
     if (els.cars) {
       els.cars.addEventListener('click', (e) => {
@@ -369,6 +451,7 @@
      the estimate never gets stranded in the previous language. */
   function render() {
     renderCars();
+    renderCal();
   }
 
   /* Filled in per step in Task 9; car is the only step that exists yet. */

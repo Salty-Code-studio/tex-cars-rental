@@ -259,3 +259,91 @@ test('carCardsHTML says per day in Dutch too', () => {
   assert.ok(pure.carCardsHTML(fleet, '', 'en').includes('/day'));
   assert.ok(pure.carCardsHTML(fleet, '', 'nl').includes('/dag'));
 });
+
+/* pickDay's return value is a plain object literal built inside the vm
+   context harness.mjs loads quiz.js into, so it carries that context's
+   Object.prototype, not this test file's. assert.deepEqual from
+   node:assert/strict is deepStrictEqual, which checks the prototype too,
+   so every expected literal below is spread to re-create it in this
+   realm first, same fix as priceCfg's test above. */
+test('pickDay sets the pick-up day first', () => {
+  assert.deepEqual({ ...pure.pickDay({ startDate: '', endDate: '' }, '2026-03-14') },
+    { startDate: '2026-03-14', endDate: '', moved: false });
+});
+
+test('pickDay sets the return day second', () => {
+  assert.deepEqual({ ...pure.pickDay({ startDate: '2026-03-14', endDate: '' }, '2026-03-20') },
+    { startDate: '2026-03-14', endDate: '2026-03-20', moved: false });
+});
+
+/* The Little John original wipes both dates here with no message at all
+   (its quiz.js:176). Same reset, but it reports itself. */
+test('pickDay announces the reset when you tap at or before the pick-up day', () => {
+  assert.deepEqual({ ...pure.pickDay({ startDate: '2026-03-14', endDate: '' }, '2026-03-10') },
+    { startDate: '2026-03-10', endDate: '', moved: true });
+  assert.deepEqual({ ...pure.pickDay({ startDate: '2026-03-14', endDate: '' }, '2026-03-14') },
+    { startDate: '2026-03-14', endDate: '', moved: true });
+});
+
+test('pickDay announces the reset when a finished range is restarted', () => {
+  assert.deepEqual({ ...pure.pickDay({ startDate: '2026-03-14', endDate: '2026-03-20' }, '2026-03-25') },
+    { startDate: '2026-03-25', endDate: '', moved: true });
+});
+
+test('hintText walks the customer through the two taps', () => {
+  const empty = { startDate: '', endDate: '' };
+  const half = { startDate: '2026-03-14', endDate: '' };
+  const full = { startDate: '2026-03-14', endDate: '2026-03-20' };
+  assert.equal(pure.hintText(empty, 'en', false), 'Tap your pick-up day.');
+  assert.equal(pure.hintText(half, 'en', false), 'Now tap your return day.');
+  assert.equal(pure.hintText(full, 'en', false), 'Sat 14 Mar \u2192 Fri 20 Mar \u00b7 6 days');
+  assert.equal(pure.hintText(empty, 'nl', false), 'Tik je ophaaldag aan.');
+  assert.equal(pure.hintText(full, 'nl', false), 'za 14 mrt \u2192 vr 20 mrt \u00b7 6 dagen');
+});
+
+/* Verbatim from spec section 4, step 2, fix 3. */
+test('hintText announces a mis-tap in the exact words the spec fixes', () => {
+  const half = { startDate: '2026-03-14', endDate: '' };
+  assert.equal(pure.hintText(half, 'en', true), 'Start date moved to Sat 14 Mar. Now tap your return day.');
+  assert.equal(pure.hintText(half, 'nl', true), 'Startdatum verplaatst naar za 14 mrt. Tik nu je terugbrengdag aan.');
+});
+
+test('monthBlockHTML greys out days before today in Aruba, never device days', () => {
+  const html = pure.monthBlockHTML(2026, 2, { startDate: '', endDate: '' }, '2026-03-15', '2027-03-15', 'en');
+  assert.match(html, /data-day="2026-03-14"[^>]*disabled/);
+  assert.ok(!/data-day="2026-03-15"[^>]*disabled/.test(html), 'today in Aruba is bookable');
+  assert.ok(!/data-day="2026-03-16"[^>]*disabled/.test(html));
+});
+
+test('monthBlockHTML greys out days past the 365 day advance limit', () => {
+  const html = pure.monthBlockHTML(2027, 2, { startDate: '', endDate: '' }, '2026-03-15', '2027-03-15', 'en');
+  assert.ok(!/data-day="2027-03-15"[^>]*disabled/.test(html));
+  assert.match(html, /data-day="2027-03-16"[^>]*disabled/);
+});
+
+test('monthBlockHTML draws the edges and the middle of the range', () => {
+  const html = pure.monthBlockHTML(2026, 2, { startDate: '2026-03-14', endDate: '2026-03-20' }, '2026-03-01', '2027-03-01', 'en');
+  assert.match(html, /class="cal2-day edge" data-day="2026-03-14"/);
+  assert.match(html, /class="cal2-day edge" data-day="2026-03-20"/);
+  assert.match(html, /class="cal2-day mid" data-day="2026-03-17"/);
+  assert.match(html, /class="cal2-day" data-day="2026-03-25"/);
+});
+
+test('monthBlockHTML puts Monday first and pads the lead-in', () => {
+  const html = pure.monthBlockHTML(2026, 2, { startDate: '', endDate: '' }, '2026-01-01', '2027-01-01', 'en');
+  assert.ok(html.indexOf('<span class="dow">Mo</span>') < html.indexOf('<span class="dow">Su</span>'));
+  // 1 March 2026 is a Sunday, so six blank cells lead in
+  assert.equal((html.match(/<span><\/span>/g) || []).length, 6);
+});
+
+test('calendarHTML shows two months side by side with capped arrows', () => {
+  const s = { startDate: '', endDate: '' };
+  const html = pure.calendarHTML({ y: 2026, m: 8 }, s, '2026-09-09', 'en', false);
+  assert.ok(html.includes('September 2026'));
+  assert.ok(html.includes('October 2026'));
+  assert.match(html, /data-cal="-1"[^>]*disabled/, 'cannot page back before this month');
+  assert.ok(!/data-cal="1"[^>]*disabled/.test(html));
+
+  const far = pure.calendarHTML({ y: 2027, m: 7 }, s, '2026-09-09', 'en', false);
+  assert.match(far, /data-cal="1"[^>]*disabled/, 'capped at twelve months ahead');
+});
