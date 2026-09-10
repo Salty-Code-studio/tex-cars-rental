@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { read } from './harness.mjs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+import { read, SITE } from './harness.mjs';
 
 const book = read('book/index.html');
 
@@ -280,4 +282,71 @@ test('the online wording the owner kept is untouched', () => {
   assert.ok(index.includes('data-book-en="Book online in minutes"'), 'the trust badge stays');
   assert.ok(index.includes('data-book-en="Book online"'), 'the how it works heading stays');
   assert.ok(index.includes('book it online in minutes'), 'the fleet section lead stays');
+});
+
+/* ============================================
+   Final review finding 1: the blog pages carried data-booking-href="/book"
+   while booking-bridge.js ran on them, so their five "Book now" / "Book
+   your car online" buttons silently rewrote onto the app wizard this whole
+   branch exists to retire. Every test above this point only ever read
+   index.html, which is exactly why three whole pages were missed. This
+   block walks every HTML page under site/ so the same drift cannot happen
+   again from any page, and then checks the blog CTAs by name.
+   ============================================ */
+function allHtmlFiles(dir) {
+  let out = [];
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) out = out.concat(allHtmlFiles(full));
+    else if (entry.endsWith('.html')) out.push(full);
+  }
+  return out;
+}
+
+test('no page under site/ carries a booking CTA the bridge would rewrite onto the app wizard', () => {
+  const pages = allHtmlFiles(SITE);
+  assert.ok(pages.length >= 6, `expected to find at least six HTML pages under site/, found ${pages.length}`);
+  for (const file of pages) {
+    const html = readFileSync(file, 'utf8');
+    assert.equal(html.includes('data-booking-href="/book"'), false,
+      `${file} carries data-booking-href="/book"; the bridge rewrites that straight onto the app wizard`);
+    assert.equal(/href\s*=\s*"[^"]*app\.tex-cars\.com\/book/.test(html), false,
+      `${file} points a booking CTA at app.tex-cars.com/book directly`);
+  }
+});
+
+const blogFiles = {
+  'blog/index.html': read('blog/index.html'),
+  'blog/driving-in-aruba.html': read('blog/driving-in-aruba.html'),
+  'blog/best-beaches-by-car-aruba.html': read('blog/best-beaches-by-car-aruba.html'),
+};
+
+test('every blog booking CTA is a plain relative link to the local quiz', () => {
+  for (const [name, html] of Object.entries(blogFiles)) {
+    const anchors = [...html.matchAll(/<a[^>]*data-book-en="[^"]*"[^>]*>[^<]*<\/a>/g)].map((m) => m[0]);
+    assert.ok(anchors.length > 0, `${name}: expected at least one booking CTA anchor`);
+    for (const a of anchors) {
+      assert.match(a, /href="\.\.\/book\/"/, `${name}: ${a}`);
+      assert.equal(/target\s*=/.test(a), false, `${name}: no new tab into an in-app webview: ${a}`);
+      assert.equal(/rel\s*=/.test(a), false, `${name}: rel goes with target: ${a}`);
+      assert.match(a, /data-book-en="Request a car"/, `${name}: ${a}`);
+      assert.match(a, /data-book-nl="Vraag een auto aan"/, `${name}: ${a}`);
+      assert.match(a, />Request a car<\/a>$/, `${name}: visible label must read Request a car: ${a}`);
+    }
+  }
+});
+
+test('every blog page has the expected count of booking CTAs', () => {
+  assert.equal((blogFiles['blog/index.html'].match(/data-book-en="Request a car"/g) || []).length, 1, 'nav only');
+  assert.equal((blogFiles['blog/driving-in-aruba.html'].match(/data-book-en="Request a car"/g) || []).length, 2, 'nav and article CTA');
+  assert.equal((blogFiles['blog/best-beaches-by-car-aruba.html'].match(/data-book-en="Request a car"/g) || []).length, 2, 'nav and article CTA');
+});
+
+test('the retired blog CTA wording is gone', () => {
+  for (const [name, html] of Object.entries(blogFiles)) {
+    assert.equal(html.includes('Book now'), false, `${name}: retired label`);
+    assert.equal(html.includes('Book your car on WhatsApp'), false, `${name}: retired label`);
+    assert.equal(html.includes('data-book-en="Book online"'), false, `${name}: retired booking-only label`);
+    assert.equal(html.includes('data-book-en="Book your car online"'), false, `${name}: retired booking-only label`);
+  }
 });
