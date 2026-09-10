@@ -77,12 +77,31 @@ test('estimateFor matches the four worked examples in the spec', () => {
   assert.equal(pure.estimateFor(i10(), 34, 'en'), 840);
 });
 
-test('estimateFor never charges more than the next larger bucket', () => {
+/* This covers the month-level cap only: every case below is priced on the
+   Hyundai i10, whose day rate times six equals its week rate exactly
+   (35 x 6 = 210), so the week-level cap never has a chance to fire here.
+   The week-level cap has its own test below, on cars where day rate times
+   six is genuinely more than the week rate. */
+test('estimateFor never charges more than the next larger month bucket', () => {
   assert.equal(pure.estimateFor(i10(), 7, 'en'), 210, 'a full week is a week');
   assert.equal(pure.estimateFor(i10(), 13, 'en'), 420, 'six days over a week caps at two weeks');
   assert.equal(pure.estimateFor(i10(), 29, 'en'), 700, '875 of week and day cost caps at one month');
   assert.equal(pure.estimateFor(i10(), 60, 'en'), 1400, 'two whole months');
   assert.equal(pure.estimateFor(i10(), 64, 'en'), 1540, 'two months plus four days, under the three month cap');
+});
+
+/* The Hyundai i10 cannot prove the week-level cap: 35 x 6 = 210, its own
+   week rate, so the capped and uncapped answers are the same number and
+   deleting the inner cap line would not break a single i10 assertion.
+   The Chevrolet Aveo and Kia Rio are the two site cars where six day
+   rates genuinely exceed the week rate (usdDay 38 x 6 = 228, usdWeek 225),
+   so pricing six days on them only comes out to 225 if the week cap
+   actually fires. Without the cap this test would see 228. */
+test('the week cap fires when six day rates exceed one week rate', () => {
+  const aveo = pure.carBySlug('chevrolet-aveo');
+  const rio = pure.carBySlug('kia-rio');
+  assert.equal(pure.estimateFor(aveo, 6, 'en'), 225, 'uncapped six days would be 38 x 6 = 228, but the week rate is 225');
+  assert.equal(pure.estimateFor(rio, 6, 'en'), 225, 'same shape on a second car, so this is not a fluke of one fleet row');
 });
 
 test('estimateFor follows the currency rule into florin', () => {
