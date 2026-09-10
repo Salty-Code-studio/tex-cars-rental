@@ -87,3 +87,47 @@ test('the send screen has all eight recap slots', () => {
     assert.ok(book.includes(`id="${id}"`), `missing recap slot ${id}`);
   }
 });
+
+/* The WhatsApp number is hardcoded in five places on purpose (a static
+   anchor needs a working href before any script runs, and this page never
+   loads booking-bridge.js to patch it later). Nothing else checks these
+   five against each other, so a number change in one place silently drifts
+   from the rest unless this test catches it. */
+test('the WhatsApp number matches across all five hardcoded places', () => {
+  const PLACES = 'site/data/config.js:25 (waNumber, the declared single source), '
+    + 'site/scripts/main.js:7 (WA_NUMBER fallback literal), '
+    + 'site/scripts/quiz.js:26 (WA_NUMBER fallback literal), '
+    + 'site/book/index.html noscript fallback anchor (q-noscript), '
+    + 'site/book/index.html initial href on qOpenWa';
+
+  const config = read('data/config.js');
+  const configMatch = config.match(/waNumber:\s*"(\d+)"/);
+  assert.ok(configMatch, `could not find waNumber in site/data/config.js. Check: ${PLACES}`);
+  const waNumber = configMatch[1];
+
+  const mainJs = read('scripts/main.js');
+  const mainMatch = mainJs.match(/const WA_NUMBER = CFG\.waNumber \|\| '(\d+)'/);
+  assert.ok(mainMatch, `could not find the WA_NUMBER fallback in site/scripts/main.js. Check: ${PLACES}`);
+
+  const quizJs = read('scripts/quiz.js');
+  const quizMatch = quizJs.match(/const WA_NUMBER = CFG\.waNumber \|\| '(\d+)'/);
+  assert.ok(quizMatch, `could not find the WA_NUMBER fallback in site/scripts/quiz.js. Check: ${PLACES}`);
+
+  const waLinksInBook = [...book.matchAll(/wa\.me\/(\d+)/g)].map((m) => m[1]);
+  assert.equal(waLinksInBook.length, 2,
+    `expected exactly two wa.me links in site/book/index.html (noscript fallback anchor + qOpenWa initial href), found ${waLinksInBook.length}. Check: ${PLACES}`);
+
+  const found = {
+    'site/data/config.js:25': waNumber,
+    'site/scripts/main.js:7': mainMatch[1],
+    'site/scripts/quiz.js:26': quizMatch[1],
+    'site/book/index.html noscript anchor': waLinksInBook[0],
+    'site/book/index.html qOpenWa href': waLinksInBook[1],
+  };
+
+  for (const [place, number] of Object.entries(found)) {
+    assert.equal(number, waNumber,
+      `${place} has WhatsApp number "${number}", expected "${waNumber}" to match site/data/config.js. `
+      + `All five places must carry the same number: ${PLACES}`);
+  }
+});

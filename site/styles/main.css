@@ -422,3 +422,16 @@ h2.title::after {
   [data-reveal] { opacity: 1; transform: none; transition: none; }
   .btn, .car, .step, .why__card, .post-card { transition: none; }
 }
+
+/* ---------- Quiz (book/): visually hidden live region ---------- */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
