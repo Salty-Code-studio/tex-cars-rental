@@ -224,3 +224,38 @@ test('waHref stays a real WhatsApp link when the message is not composed yet', (
   assert.match(href, /^https:\/\/wa\.me\/\d+$/);
   assert.ok(!href.includes('?text='));
 });
+
+import { loadSite as reload } from './harness.mjs';
+const fleet = reload().window.TEX_FLEET;
+
+test('carCardsHTML renders one card per active site car', () => {
+  const html = pure.carCardsHTML(fleet, '', 'en');
+  assert.equal((html.match(/class="q-carcard/g) || []).length, 6);
+  for (const slug of ['hyundai-i10', 'ford-figo', 'suzuki-baleno', 'hyundai-accent', 'chevrolet-aveo', 'kia-rio']) {
+    assert.ok(html.includes(`data-car="${slug}"`), `missing card for ${slug}`);
+  }
+});
+
+test('carCardsHTML shows the photo, the name, the class and the per day rate', () => {
+  const html = pure.carCardsHTML(fleet, '', 'en');
+  assert.ok(html.includes('src="../assets/img/car-hyundai-i10.jpg"'), 'the /book/ page is one level down');
+  assert.ok(html.includes('Hyundai i10'));
+  assert.ok(html.includes('Economy'));
+  assert.ok(html.includes('$35'));
+});
+
+test('carCardsHTML follows the currency rule', () => {
+  assert.ok(pure.carCardsHTML(fleet, '', 'pap').includes('Afl. 50'));
+  assert.ok(pure.carCardsHTML(fleet, '', 'nl').includes('$35'));
+});
+
+test('carCardsHTML marks the selected card and only that one', () => {
+  const html = pure.carCardsHTML(fleet, 'kia-rio', 'en');
+  assert.equal((html.match(/is-sel/g) || []).length, 1);
+  assert.match(html, /data-car="kia-rio"[^>]*class="q-carcard is-sel"|class="q-carcard is-sel"[^>]*data-car="kia-rio"/);
+});
+
+test('carCardsHTML says per day in Dutch too', () => {
+  assert.ok(pure.carCardsHTML(fleet, '', 'en').includes('/day'));
+  assert.ok(pure.carCardsHTML(fleet, '', 'nl').includes('/dag'));
+});

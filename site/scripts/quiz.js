@@ -190,13 +190,186 @@
       : `https://wa.me/${WA_NUMBER}`;
   };
 
+  /* ---------- micro translations for JavaScript rendered content ----------
+     Static copy lives in data-en / data-nl in the markup and is handled by
+     scripts/i18n.js. Only strings this file builds live here. */
+  const T = {
+    en: {
+      perDay: '/day', days: (n) => `${n} ${n === 1 ? 'day' : 'days'}`,
+      dows: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'],
+      hintStart: 'Tap your pick-up day.',
+      hintEnd: 'Now tap your return day.',
+      moved: (d) => `Start date moved to ${d}. Now tap your return day.`,
+      prevMonth: 'Previous month', nextMonth: 'Next month',
+      errCar: 'Tap the car you would like.',
+      errDates: 'Tap a pick-up day and a return day on the calendar.',
+      errSpan: 'Ninety days is the longest we can take here. Ask Tex on WhatsApp for a longer rental.',
+      errDelivery: 'Tell us where you would like the car.',
+      errName: 'We need a name so Tex knows who to answer.',
+      errPhone: 'Add your WhatsApp number with the country code.',
+      estimate: (m, n) => `Estimate: ${m} for ${n}. Tex confirms the final price on WhatsApp.`,
+      deposit: (m) => `A refundable deposit of ${m} is arranged when you pick the car up. It is not part of this estimate.`,
+    },
+    nl: {
+      perDay: '/dag', days: (n) => `${n} ${n === 1 ? 'dag' : 'dagen'}`,
+      dows: ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'],
+      hintStart: 'Tik je ophaaldag aan.',
+      hintEnd: 'Tik nu je terugbrengdag aan.',
+      moved: (d) => `Startdatum verplaatst naar ${d}. Tik nu je terugbrengdag aan.`,
+      prevMonth: 'Vorige maand', nextMonth: 'Volgende maand',
+      errCar: 'Tik de auto aan die je wil.',
+      errDates: 'Tik een ophaaldag en een terugbrengdag aan op de kalender.',
+      errSpan: 'Negentig dagen is het langste dat hier kan. Vraag Tex op WhatsApp naar een langere huur.',
+      errDelivery: 'Vertel ons waar je de auto wil hebben.',
+      errName: 'We hebben een naam nodig, zodat Tex weet wie hij antwoordt.',
+      errPhone: 'Vul je WhatsApp nummer in met landcode.',
+      estimate: (m, n) => `Schatting: ${m} voor ${n}. Tex bevestigt de definitieve prijs via WhatsApp.`,
+      deposit: (m) => `Een borg van ${m} regel je bij het ophalen. Die valt buiten deze schatting.`,
+    },
+  };
+  const t = (lang) => T[lang] || T.en;
+
+  const esc = (s) => String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+  const isActiveCar = window.TEX_ACTIVE || ((c) => !c.status || c.status === 'active');
+
+  /* The inner spans are q-cc-*, not q-carcard__*: see the comment on those
+     rules in styles/main.css for why the BEM name had to change. */
+  function carCardsHTML(fleet, selectedSlug, lang) {
+    const P = priceCfg(lang);
+    return fleet.filter(isActiveCar).map((car) => `
+      <button type="button" class="q-carcard${car.slug === selectedSlug ? ' is-sel' : ''}" data-car="${esc(car.slug)}">
+        <img src="../${esc(car.image)}" alt="${esc(car.name)}" loading="lazy"
+             onerror="this.src='../assets/img/car-placeholder.svg'">
+        <span class="q-cc-body">
+          <span class="q-cc-cls">${esc(car.class)}</span>
+          <span class="q-cc-name">${esc(car.name)}</span>
+          <span class="q-cc-price">${money(car[P.day], P)}${t(lang).perDay}</span>
+        </span>
+      </button>`).join('');
+  }
+
   const PURE = {
     isoOf, arubaTodayISO, addDaysISO, daysBetween,
     carBySlug, priceCfg, money, estimateFor,
     fmtDate, monthLabel, normalisePhone,
-    buildWaText, waHref,
+    buildWaText, waHref, carCardsHTML,
     MAX_SPAN_DAYS, MAX_AHEAD_DAYS, MAX_AHEAD_MONTHS,
     NOTE_MAX, NOTE_COUNTER_FROM,
   };
   window.TEX_QUIZ = PURE;
+
+  /* ============================================
+     DOM layer. Nothing below runs until DOMContentLoaded, which is what
+     lets the Node tests load this file with a stub document.
+     ============================================ */
+  const lang = () => (window.TEX_i18n ? window.TEX_i18n.getLang() : 'en');
+
+  const state = {
+    carKey: '', startDate: '', endDate: '',
+    delivery: '', deliveryNote: '', name: '', phone: '',
+  };
+
+  let steps = [], dots = [], current = 0;
+  let els = {};
+
+  function show(i) {
+    current = Math.max(0, Math.min(steps.length - 1, i));
+    steps.forEach((s, k) => s.classList.toggle('is-active', k === current));
+    dots.forEach((d, k) => d.classList.toggle('on', k <= current));
+    clearError();
+    const active = steps[current];
+    if (active) {
+      const heading = active.querySelector('.q-title');
+      const announce = document.getElementById('qStepAnnounce');
+      if (announce) announce.textContent = heading ? heading.textContent : '';
+      active.focus();
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function setError(msg) {
+    const box = steps[current] && steps[current].querySelector('.q-error');
+    if (box) box.textContent = msg;
+  }
+  const clearError = () => setError('');
+
+  function renderCars() {
+    if (!els.cars) return;
+    els.cars.innerHTML = carCardsHTML(FLEET, state.carKey, lang());
+  }
+
+  /* Keeps every role=radio option group (today just delivery, step 3) in
+     sync: aria-checked="true" on the chosen button, "false" on the rest,
+     so a screen reader group never gets stuck announcing "not checked". */
+  function syncRadioGroup(container, selectedValue, dataAttr) {
+    if (!container) return;
+    container.querySelectorAll('[role="radio"]').forEach((btn) => {
+      btn.setAttribute('aria-checked', btn.dataset[dataAttr] === selectedValue ? 'true' : 'false');
+    });
+  }
+
+  function boot() {
+    steps = Array.from(document.querySelectorAll('.q-step'));
+    dots = Array.from(document.querySelectorAll('.quiz-progress i'));
+    els = {
+      cars: document.getElementById('qCars'),
+      cal: document.getElementById('qCal'),
+    };
+
+    // Arrived from a fleet card: /book/?car=hyundai-i10 preselects it.
+    // An unknown or stale slug falls through harmlessly to no selection.
+    const wanted = new URLSearchParams(window.location.search).get('car');
+    if (wanted && carBySlug(wanted)) state.carKey = wanted;
+
+    if (els.cars) {
+      els.cars.addEventListener('click', (e) => {
+        const card = e.target.closest('[data-car]');
+        if (!card) return;
+        state.carKey = card.dataset.car;
+        clearError();
+        renderCars();
+        show(current + 1);
+      });
+    }
+
+    document.querySelectorAll('.q-opts[role="radiogroup"]').forEach((group) => {
+      group.addEventListener('click', (e) => {
+        const opt = e.target.closest('[data-delivery]');
+        if (!opt) return;
+        state.delivery = opt.dataset.delivery;
+        syncRadioGroup(group, state.delivery, 'delivery');
+        clearError();
+      });
+    });
+
+    document.querySelectorAll('[data-next]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const msg = validateStep(steps[current].dataset.validate, state, arubaTodayISO(), lang());
+        if (msg) { setError(msg); return; }
+        show(current + 1);
+      }));
+    document.querySelectorAll('[data-back]').forEach((b) =>
+      b.addEventListener('click', () => show(current - 1)));
+
+    render();
+    show(0);
+  }
+
+  /* Everything the language can change is re-rendered here, which is why
+     the estimate never gets stranded in the previous language. */
+  function render() {
+    renderCars();
+  }
+
+  /* Filled in per step in Task 9; car is the only step that exists yet. */
+  function validateStep(kind, s, todayISO, l) {
+    if (kind === 'car') return s.carKey ? '' : t(l).errCar;
+    return '';
+  }
+
+  document.addEventListener('DOMContentLoaded', boot);
+  window.addEventListener('langchange', render);
 })();

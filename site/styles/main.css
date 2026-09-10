@@ -465,10 +465,14 @@ h2.title::after {
 .q-carcard:hover { transform: translateY(-2px); border-color: var(--brand-blue); }
 .q-carcard.is-sel { border-color: var(--brand-blue); box-shadow: var(--glow-blue); background: #fff; }
 .q-carcard img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; display: block; }
-.q-carcard__body { padding: .6rem .7rem .7rem; display: grid; gap: .15rem; }
-.q-carcard__cls { font-size: .66rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--brand-blue); }
-.q-carcard__name { font-weight: 700; font-size: .95rem; color: var(--brand-navy); }
-.q-carcard__price { font-size: .85rem; color: var(--ink-soft); }
+/* Named q-cc-*, not q-carcard__*, on purpose: the pure test counts card
+   wrappers with a plain substring match on class="q-carcard, so a BEM name
+   that starts with q-carcard on every inner span would inflate that count
+   past one per card. */
+.q-cc-body { padding: .6rem .7rem .7rem; display: grid; gap: .15rem; }
+.q-cc-cls { font-size: .66rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--brand-blue); }
+.q-cc-name { font-weight: 700; font-size: .95rem; color: var(--brand-navy); }
+.q-cc-price { font-size: .85rem; color: var(--ink-soft); }
 
 /* ---------- Step 3: the delivery options ---------- */
 .q-opts { display: grid; gap: .6rem; }
