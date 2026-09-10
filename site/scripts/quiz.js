@@ -270,18 +270,26 @@
     return `${fmtDate(s.startDate, lang)} \u2192 ${fmtDate(s.endDate, lang)} \u00b7 ${L.days(n)}`;
   }
 
+  /* Task 8 review: without this, a customer could paint a range past the
+     ninety day span right on the calendar, see a clean blue fill and a
+     day count, and only be told it was too long after tapping Continue.
+     Once a start is picked and there is no end yet, days more than
+     MAX_SPAN_DAYS beyond the start are disabled here too, on top of the
+     365 day cap. validateStep keeps its own span check as well, since the
+     calendar is not the only way this state can be reached. */
   function monthBlockHTML(y, m, s, todayISO, maxISO, lang) {
     let html = `<div class="cal2-month"><p class="cal2-title">${esc(monthLabel(y, m, lang))}</p><div class="cal2-grid">`;
     for (const d of t(lang).dows) html += `<span class="dow">${d}</span>`;
     const lead = (new Date(Date.UTC(y, m, 1)).getUTCDay() + 6) % 7; // Monday first
     for (let i = 0; i < lead; i++) html += '<span></span>';
     const dim = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    const spanCapISO = s.startDate && !s.endDate ? addDaysISO(s.startDate, MAX_SPAN_DAYS) : '';
     for (let d = 1; d <= dim; d++) {
       const iso = isoOf(y, m, d);
       let cls = 'cal2-day';
       if (iso === s.startDate || (s.endDate && iso === s.endDate)) cls += ' edge';
       else if (s.startDate && s.endDate && iso > s.startDate && iso < s.endDate) cls += ' mid';
-      const off = iso < todayISO || iso > maxISO ? ' disabled' : '';
+      const off = iso < todayISO || iso > maxISO || (spanCapISO && iso > spanCapISO) ? ' disabled' : '';
       html += `<button type="button" class="${cls}" data-day="${iso}"${off}>${d}</button>`;
     }
     return html + '</div></div>';
@@ -301,12 +309,45 @@
       <p class="cal2-hint">${esc(hintText(s, lang, moved))}</p>`;
   }
 
+  /* ---------- validation ----------
+     Nothing on the other side re-checks any of this, because there is no
+     other side: the browser is the only place these rules run. They exist
+     so the customer is told before they compose a message Tex would only
+     have to correct on WhatsApp. The three date rules are the ones from
+     spec section 4: a return day after the pick-up day, at most 90 days of
+     span, and a start no earlier than today in Aruba and no more than 365
+     days ahead. */
+  function validateStep(kind, s, todayISO, lang) {
+    const L = t(lang);
+    if (kind === 'car') return carBySlug(s.carKey) ? '' : L.errCar;
+
+    if (kind === 'dates') {
+      const days = daysBetween(s.startDate, s.endDate);
+      if (!s.startDate || !s.endDate || days <= 0) return L.errDates;
+      if (s.startDate < todayISO) return L.errDates;
+      if (s.startDate > addDaysISO(todayISO, MAX_AHEAD_DAYS)) return L.errDates;
+      if (days > MAX_SPAN_DAYS) return L.errSpan;
+      return '';
+    }
+
+    if (kind === 'delivery') return ['airport', 'hotel', 'pickup'].includes(s.delivery) ? '' : L.errDelivery;
+
+    if (kind === 'who') {
+      const name = String(s.name || '').trim();
+      if (name.length < 2 || name.length > 60) return L.errName;
+      if (!normalisePhone(s.phone)) return L.errPhone;
+      return '';
+    }
+    return '';
+  }
+
   const PURE = {
     isoOf, arubaTodayISO, addDaysISO, daysBetween,
     carBySlug, priceCfg, money, estimateFor,
     fmtDate, monthLabel, normalisePhone,
     buildWaText, waHref, carCardsHTML,
     pickDay, hintText, monthBlockHTML, calendarHTML,
+    validateStep,
     MAX_SPAN_DAYS, MAX_AHEAD_DAYS, MAX_AHEAD_MONTHS,
     NOTE_MAX, NOTE_COUNTER_FROM,
   };
@@ -382,6 +423,10 @@
     els = {
       cars: document.getElementById('qCars'),
       cal: document.getElementById('qCal'),
+      note: document.getElementById('qNote'),
+      noteCount: document.getElementById('qNoteCount'),
+      name: document.getElementById('qName'),
+      phone: document.getElementById('qPhone'),
     };
 
     // Arrived from a fleet card: /book/?car=hyundai-i10 preselects it.
@@ -412,6 +457,18 @@
         renderCal();
       });
     }
+
+    if (els.note) {
+      els.note.addEventListener('input', () => {
+        state.deliveryNote = els.note.value.slice(0, NOTE_MAX).trim();
+        // the counter only appears once the 200 character cap is in sight
+        const used = els.note.value.length;
+        els.noteCount.hidden = used < NOTE_COUNTER_FROM;
+        els.noteCount.textContent = `${used} / ${NOTE_MAX}`;
+      });
+    }
+    if (els.name) els.name.addEventListener('input', () => { state.name = els.name.value.trim(); clearError(); });
+    if (els.phone) els.phone.addEventListener('input', () => { state.phone = els.phone.value; clearError(); });
 
     if (els.cars) {
       els.cars.addEventListener('click', (e) => {
@@ -448,16 +505,19 @@
   }
 
   /* Everything the language can change is re-rendered here, which is why
-     the estimate never gets stranded in the previous language. */
+     the estimate never gets stranded in the previous language. A visible
+     validation message is state-driven text too: if the current step is
+     already showing one, it is re-run through validateStep so the message
+     itself flips language along with everything else, instead of sitting
+     there in the language the customer just left. */
   function render() {
     renderCars();
     renderCal();
-  }
-
-  /* Filled in per step in Task 9; car is the only step that exists yet. */
-  function validateStep(kind, s, todayISO, l) {
-    if (kind === 'car') return s.carKey ? '' : t(l).errCar;
-    return '';
+    const active = steps[current];
+    const box = active && active.querySelector('.q-error');
+    if (box && box.textContent) {
+      setError(validateStep(active.dataset.validate, state, arubaTodayISO(), lang()));
+    }
   }
 
   document.addEventListener('DOMContentLoaded', boot);

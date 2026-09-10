@@ -347,3 +347,84 @@ test('calendarHTML shows two months side by side with capped arrows', () => {
   const far = pure.calendarHTML({ y: 2027, m: 7 }, s, '2026-09-09', 'en', false);
   assert.match(far, /data-cal="1"[^>]*disabled/, 'capped at twelve months ahead');
 });
+
+/* Task 8 review finding: a customer could paint a range past the ninety
+   day span on the calendar itself, see a clean blue fill and a day count,
+   and only be told it was too long after tapping Continue. These two
+   tests pin the fix: before any start is picked only the 365 day cap
+   applies, and once a start exists but no end yet, days more than
+   MAX_SPAN_DAYS beyond the start are disabled too. 2026-03-14 plus ninety
+   days is 2026-06-12, so 2026-06-13 is the first disabled day. */
+test('monthBlockHTML does not apply the span cap before any start is picked', () => {
+  const html = pure.monthBlockHTML(2026, 5, { startDate: '', endDate: '' }, '2026-01-01', '2027-01-01', 'en');
+  assert.ok(!/data-day="2026-06-13"[^>]*disabled/.test(html), 'with no start chosen, only the 365 day cap applies');
+});
+
+test('monthBlockHTML applies the ninety day span cap once a start is picked and no end yet', () => {
+  const s = { startDate: '2026-03-14', endDate: '' };
+  const html = pure.monthBlockHTML(2026, 5, s, '2026-01-01', '2027-01-01', 'en');
+  assert.ok(!/data-day="2026-06-12"[^>]*disabled/.test(html), 'exactly ninety days out is still allowed');
+  assert.match(html, /data-day="2026-06-13"[^>]*disabled/, 'one day beyond the ninety day span is disabled');
+});
+
+const TODAY = '2026-09-09';
+const base = {
+  carKey: 'hyundai-i10', startDate: '2026-09-20', endDate: '2026-09-26',
+  delivery: 'hotel', deliveryNote: '', name: 'Monischa', phone: '+2975601234',
+};
+
+test('validateStep passes a complete answer at every step', () => {
+  for (const kind of ['car', 'dates', 'delivery', 'who', 'none']) {
+    assert.equal(pure.validateStep(kind, base, TODAY, 'en'), '', `${kind} should pass`);
+  }
+});
+
+test('validateStep asks for a car', () => {
+  assert.equal(pure.validateStep('car', { ...base, carKey: '' }, TODAY, 'en'), 'Tap the car you would like.');
+  assert.equal(pure.validateStep('car', { ...base, carKey: 'not-a-car' }, TODAY, 'en'), 'Tap the car you would like.');
+  assert.equal(pure.validateStep('car', { ...base, carKey: '' }, TODAY, 'nl'), 'Tik de auto aan die je wil.');
+});
+
+test('validateStep asks for both dates and a return day after the pick-up day', () => {
+  const msg = 'Tap a pick-up day and a return day on the calendar.';
+  assert.equal(pure.validateStep('dates', { ...base, endDate: '' }, TODAY, 'en'), msg);
+  assert.equal(pure.validateStep('dates', { ...base, startDate: '' }, TODAY, 'en'), msg);
+  assert.equal(pure.validateStep('dates', { ...base, endDate: base.startDate }, TODAY, 'en'), msg);
+});
+
+test('validateStep enforces the three date rules the spec sets', () => {
+  assert.equal(pure.validateStep('dates', { ...base, startDate: '2026-09-08', endDate: '2026-09-12' }, TODAY, 'en'),
+    'Tap a pick-up day and a return day on the calendar.', 'a start before today in Aruba is rejected');
+  assert.equal(pure.validateStep('dates', { ...base, startDate: '2027-09-10', endDate: '2027-09-14' }, TODAY, 'en'),
+    'Tap a pick-up day and a return day on the calendar.', 'more than 365 days ahead is rejected');
+  assert.equal(pure.validateStep('dates', { ...base, startDate: '2026-09-20', endDate: '2026-12-20' }, TODAY, 'en'),
+    'Ninety days is the longest we can take here. Ask Tex on WhatsApp for a longer rental.');
+  assert.equal(pure.validateStep('dates', { ...base, startDate: '2026-09-20', endDate: '2026-12-19' }, TODAY, 'en'),
+    '', 'exactly ninety days is allowed');
+});
+
+test('validateStep asks where the car should go', () => {
+  assert.equal(pure.validateStep('delivery', { ...base, delivery: '' }, TODAY, 'en'), 'Tell us where you would like the car.');
+  assert.equal(pure.validateStep('delivery', { ...base, delivery: 'desk' }, TODAY, 'en'), 'Tell us where you would like the car.');
+});
+
+test('validateStep wants a name of two to sixty characters', () => {
+  const msg = 'We need a name so Tex knows who to answer.';
+  assert.equal(pure.validateStep('who', { ...base, name: '' }, TODAY, 'en'), msg);
+  assert.equal(pure.validateStep('who', { ...base, name: 'M' }, TODAY, 'en'), msg);
+  assert.equal(pure.validateStep('who', { ...base, name: 'x'.repeat(61) }, TODAY, 'en'), msg);
+  assert.equal(pure.validateStep('who', { ...base, name: 'Mo' }, TODAY, 'en'), '');
+});
+
+test('validateStep requires a WhatsApp number, per D5', () => {
+  const msg = 'Add your WhatsApp number with the country code.';
+  assert.equal(pure.validateStep('who', { ...base, phone: '' }, TODAY, 'en'), msg);
+  assert.equal(pure.validateStep('who', { ...base, phone: '5601234' }, TODAY, 'en'), msg);
+  assert.equal(pure.validateStep('who', { ...base, phone: '+297 560 1234' }, TODAY, 'en'), '');
+  assert.equal(pure.validateStep('who', { ...base, phone: '' }, TODAY, 'nl'), 'Vul je WhatsApp nummer in met landcode.');
+});
+
+test('validateStep checks the name before the phone, so one message shows at a time', () => {
+  assert.equal(pure.validateStep('who', { ...base, name: '', phone: '' }, TODAY, 'en'),
+    'We need a name so Tex knows who to answer.');
+});
