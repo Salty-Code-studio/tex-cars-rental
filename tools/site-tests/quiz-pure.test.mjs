@@ -236,7 +236,7 @@ test('waHref stays a real WhatsApp link when the message is not composed yet', (
    This pins the real fix: a resolved car alone must still produce a bare
    wa.me link, with no trace of a half built message. */
 test('a deep linked car with no dates and no delivery choice still yields a bare wa.me link', () => {
-  const deepLinked = { carKey: 'kia-rio', startDate: '', endDate: '', delivery: '', deliveryNote: '', name: '', phone: '' };
+  const deepLinked = { carKey: 'kia-rio', startDate: '', endDate: '', delivery: '', deliveryNote: '', name: '' };
   assert.equal(pure.buildWaText(deepLinked, 'en'), '');
   assert.equal(pure.buildWaText(deepLinked, 'nl'), '');
   const href = pure.waHref(deepLinked, 'en');
@@ -247,7 +247,7 @@ test('a deep linked car with no dates and no delivery choice still yields a bare
 });
 
 test('a resolved car with dates but no delivery choice yet also stays a bare wa.me link', () => {
-  const partial = { carKey: 'kia-rio', startDate: '2026-09-20', endDate: '2026-09-26', delivery: '', deliveryNote: '', name: '', phone: '' };
+  const partial = { carKey: 'kia-rio', startDate: '2026-09-20', endDate: '2026-09-26', delivery: '', deliveryNote: '', name: '' };
   assert.equal(pure.buildWaText(partial, 'en'), '');
   const href = pure.waHref(partial, 'en');
   assert.match(href, /^https:\/\/wa\.me\/\d+$/, href);
@@ -399,7 +399,7 @@ test('monthBlockHTML applies the ninety day span cap once a start is picked and 
 const TODAY = '2026-09-09';
 const base = {
   carKey: 'hyundai-i10', startDate: '2026-09-20', endDate: '2026-09-26',
-  delivery: 'hotel', deliveryNote: '', name: 'Monischa', phone: '+2975601234',
+  delivery: 'hotel', deliveryNote: '', name: 'Monischa',
 };
 
 test('validateStep passes a complete answer at every step', () => {
@@ -465,23 +465,10 @@ test('validateStep wants a name of two to sixty characters', () => {
   assert.equal(pure.validateStep('who', { ...base, name: '' }, TODAY, 'nl'), 'We hebben een naam nodig, zodat Tex weet wie hij antwoordt.');
 });
 
-test('validateStep requires a WhatsApp number, per D5', () => {
-  const msg = 'Add your WhatsApp number with the country code.';
-  assert.equal(pure.validateStep('who', { ...base, phone: '' }, TODAY, 'en'), msg);
-  assert.equal(pure.validateStep('who', { ...base, phone: '5601234' }, TODAY, 'en'), msg);
-  assert.equal(pure.validateStep('who', { ...base, phone: '+297 560 1234' }, TODAY, 'en'), '');
-  assert.equal(pure.validateStep('who', { ...base, phone: '' }, TODAY, 'nl'), 'Vul je WhatsApp nummer in met landcode.');
-});
-
-test('validateStep checks the name before the phone, so one message shows at a time', () => {
-  assert.equal(pure.validateStep('who', { ...base, name: '', phone: '' }, TODAY, 'en'),
-    'We need a name so Tex knows who to answer.');
-});
-
 const SEND = {
   carKey: 'hyundai-i10', startDate: '2026-03-14', endDate: '2026-03-20',
   delivery: 'hotel', deliveryNote: 'Divi Village, arriving 11:00',
-  name: 'Monischa', phone: '+297 560 1234',
+  name: 'Monischa',
 };
 
 /* Verbatim from spec section 5. The word estimate leads the sentence in
@@ -504,7 +491,7 @@ test('the words quote and total never reach the customer', () => {
   }
 });
 
-test('recapValues fills all eight rows', () => {
+test('recapValues fills all seven rows and carries no phone row', () => {
   const r = pure.recapValues(SEND, 'en');
   assert.equal(r.car, 'Hyundai i10 (Economy)');
   assert.equal(r.from, 'Sat 14 Mar');
@@ -513,7 +500,7 @@ test('recapValues fills all eight rows', () => {
   assert.equal(r.where, 'Bring it to my hotel');
   assert.equal(r.note, 'Divi Village, arriving 11:00');
   assert.equal(r.name, 'Monischa');
-  assert.equal(r.phone, '+2975601234', 'the recap shows the normalised number, so the customer can check it before sending');
+  assert.equal('phone' in r, false, 'the phone field was removed, so recapValues must not carry a phone key');
 });
 
 test('recapValues translates the delivery row', () => {

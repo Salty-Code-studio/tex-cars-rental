@@ -124,7 +124,14 @@
 
   /* Spaces, dashes, dots and brackets come out; an optional leading plus
      and 8 to 17 digits stay. Stored and messaged in this normalised form.
-     Nothing here checks that the number is real or that it is on WhatsApp. */
+     Nothing here checks that the number is real or that it is on WhatsApp.
+
+     Retained deliberately: the quiz no longer collects a phone number (the
+     back office inbox it was going to key on was cut, and the customer's
+     number already reaches Tex because they send the WhatsApp message
+     themselves), so nothing in this file calls this function any more. It
+     stays, unused, for the deferred back office work, along with its tests
+     in tools/site-tests/quiz-pure.test.mjs. Do not delete it on cleanup. */
   function normalisePhone(raw) {
     const cleaned = String(raw == null ? '' : raw).replace(/[\s.()-]/g, '');
     return /^\+?\d{8,17}$/.test(cleaned) ? cleaned : '';
@@ -156,8 +163,8 @@
        check while the dates and the delivery choice are still empty. Do
        not compose a message until the state is genuinely complete, or the
        anchor ends up holding Invalid Date and an undefined delivery line.
-       The name and phone are still allowed to be empty here; step 4 is
-       where those get validated. */
+       The name is still allowed to be empty here; step 4 is where it
+       gets validated. */
     if (!car || !req.startDate || !req.endDate || !req.delivery) return '';
     const days = daysBetween(req.startDate, req.endDate);
     const est = estimateFor(car, days, lang);
@@ -215,7 +222,6 @@
       errSpan: 'Ninety days is the longest we can take here. Ask Tex on WhatsApp for a longer rental.',
       errDelivery: 'Tell us where you would like the car.',
       errName: 'We need a name so Tex knows who to answer.',
-      errPhone: 'Add your WhatsApp number with the country code.',
       estimate: (m, n) => `Estimate: ${m} for ${n}. Tex confirms the final price on WhatsApp.`,
       deposit: (m) => `A refundable deposit of ${m} is arranged when you pick the car up. It is not part of this estimate.`,
     },
@@ -232,7 +238,6 @@
       errSpan: 'Negentig dagen is het langste dat hier kan. Vraag Tex op WhatsApp naar een langere huur.',
       errDelivery: 'Vertel ons waar je de auto wil hebben.',
       errName: 'We hebben een naam nodig, zodat Tex weet wie hij antwoordt.',
-      errPhone: 'Vul je WhatsApp nummer in met landcode.',
       estimate: (m, n) => `Schatting: ${m} voor ${n}. Tex bevestigt de definitieve prijs via WhatsApp.`,
       deposit: (m) => `Een borg van ${m} regel je bij het ophalen. Die valt buiten deze schatting.`,
     },
@@ -352,7 +357,6 @@
     if (kind === 'who') {
       const name = String(s.name || '').trim();
       if (name.length < 2 || name.length > 60) return L.errName;
-      if (!normalisePhone(s.phone)) return L.errPhone;
       return '';
     }
     return '';
@@ -392,7 +396,6 @@
       where: (lang === 'nl' ? RECAP_WHERE.nl : RECAP_WHERE.en)[s.delivery] || '',
       note: s.deliveryNote || '',
       name: s.name || '',
-      phone: normalisePhone(s.phone),
     };
   }
 
@@ -416,7 +419,7 @@
 
   const state = {
     carKey: '', startDate: '', endDate: '',
-    delivery: '', deliveryNote: '', name: '', phone: '',
+    delivery: '', deliveryNote: '', name: '',
   };
   const view = { y: 0, m: 0 };
   let moved = false;   // true right after a mis-tap reset, so the hint says so
@@ -473,7 +476,6 @@
     els.recap.rWhere.textContent = v.where;
     els.recap.rNote.textContent = v.note;
     els.recap.rName.textContent = v.name;
-    els.recap.rPhone.textContent = v.phone;
     if (els.estRow) els.estRow.hidden = !v.est;
     if (els.noteRow) els.noteRow.hidden = !v.note;
     if (els.estimate) els.estimate.textContent = estimateSentence(state, l);
@@ -510,7 +512,6 @@
       note: document.getElementById('qNote'),
       noteCount: document.getElementById('qNoteCount'),
       name: document.getElementById('qName'),
-      phone: document.getElementById('qPhone'),
       estimate: document.getElementById('qEstimate'),
       deposit: document.getElementById('qDeposit'),
       openWa: document.getElementById('qOpenWa'),
@@ -518,7 +519,7 @@
         rCar: document.getElementById('rCar'), rFrom: document.getElementById('rFrom'),
         rUntil: document.getElementById('rUntil'), rEst: document.getElementById('rEst'),
         rWhere: document.getElementById('rWhere'), rNote: document.getElementById('rNote'),
-        rName: document.getElementById('rName'), rPhone: document.getElementById('rPhone'),
+        rName: document.getElementById('rName'),
       },
       estRow: document.getElementById('rEstRow'),
       noteRow: document.getElementById('rNoteRow'),
@@ -563,7 +564,6 @@
       });
     }
     if (els.name) els.name.addEventListener('input', () => { state.name = els.name.value.trim(); clearError(); });
-    if (els.phone) els.phone.addEventListener('input', () => { state.phone = els.phone.value; clearError(); });
 
     if (els.cars) {
       els.cars.addEventListener('click', (e) => {

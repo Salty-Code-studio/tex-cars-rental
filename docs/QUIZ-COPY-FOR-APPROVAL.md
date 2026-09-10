@@ -39,7 +39,7 @@ The trust line sits above the progress dots at the very top of the quiz, so it i
 
 ---
 
-## 3. The six error messages
+## 3. The five error messages
 
 These only appear if a customer tries to continue without filling something in, or picks something the page cannot accept. Each row says exactly when it fires.
 
@@ -51,7 +51,6 @@ These only appear if a customer tries to continue without filling something in, 
 | Rental too long | The span between pick-up and return is more than 90 days | "Ninety days is the longest we can take here. Ask Tex on WhatsApp for a longer rental." | "Negentig dagen is het langste dat hier kan. Vraag Tex op WhatsApp naar een langere huur." | 7 |
 | No drop-off choice | Customer taps Continue on step 3 without picking airport, hotel, or pick up at Tex | "Tell us where you would like the car." | "Vertel ons waar je de auto wil hebben." | 7 |
 | No name | Customer taps Continue on step 4 with a name under 2 characters or over 60 | "We need a name so Tex knows who to answer." | "We hebben een naam nodig, zodat Tex weet wie hij antwoordt." | 7 |
-| No usable phone number | Customer taps Continue on step 4 with a number that is not 8 to 17 digits, with or without a leading plus | "Add your WhatsApp number with the country code." | "Vul je WhatsApp nummer in met landcode." | 7 |
 
 Two of these are worth calling out by name:
 

@@ -75,19 +75,16 @@ test('the free text line is capped at 200 characters and is a single line', () =
   assert.match(note[0], /type="text"/);
 });
 
-test('the phone field is set up for a phone keyboard', () => {
-  const phone = book.match(/<input[^>]*id="qPhone"[^>]*>/);
-  assert.ok(phone);
-  assert.match(phone[0], /type="tel"/);
-  assert.match(phone[0], /inputmode="tel"/);
-  assert.match(phone[0], /autocomplete="tel"/);
-  assert.match(phone[0], /placeholder="\+297 560 1234"/);
+test('step 4 carries no phone field: the quiz never sends it and never stores it', () => {
+  assert.equal(book.includes('id="qPhone"'), false, 'the phone input must be gone from the markup');
+  assert.equal(/WhatsApp number|WhatsApp nummer/.test(book), false, 'the phone label and recap row must be gone too');
 });
 
-test('the send screen has all eight recap slots', () => {
-  for (const id of ['rCar', 'rFrom', 'rUntil', 'rEst', 'rWhere', 'rNote', 'rName', 'rPhone']) {
+test('the send screen has all seven remaining recap slots and no phone row', () => {
+  for (const id of ['rCar', 'rFrom', 'rUntil', 'rEst', 'rWhere', 'rNote', 'rName']) {
     assert.ok(book.includes(`id="${id}"`), `missing recap slot ${id}`);
   }
+  assert.equal(book.includes('id="rPhone"'), false, 'the phone recap row was removed with the field');
 });
 
 /* The WhatsApp number is hardcoded in five places on purpose (a static
