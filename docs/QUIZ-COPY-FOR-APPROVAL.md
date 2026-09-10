@@ -129,7 +129,7 @@ This replaced the old inquiry form on the homepage (the one with name, email, da
 
 | String | English | Dutch |
 |---|---|---|
-| Paragraph | "Pick your car, tap your days, tell us where you want it, and leave your WhatsApp number. Nothing is reserved until Tex confirms it." | "Kies je auto, tik je dagen aan, vertel ons waar je hem wil hebben en laat je WhatsApp nummer achter. Er is niets gereserveerd tot Tex het bevestigt." |
+| Paragraph | "Pick your car, tap your days, tell us where you want it, and send it on WhatsApp. Nothing is reserved until Tex confirms it." | "Kies je auto, tik je dagen aan, vertel ons waar je hem wil hebben en stuur het via WhatsApp. Er is niets gereserveerd tot Tex het bevestigt." |
 | Button | "Request a car" | "Vraag een auto aan" |
 
 **Where:** homepage, "Reserve your car" section, where the old inquiry form used to be.
