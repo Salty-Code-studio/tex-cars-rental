@@ -435,3 +435,95 @@ h2.title::after {
   white-space: nowrap;
   border: 0;
 }
+
+/* ============================================
+   Quiz page (/book/), the WhatsApp request quiz
+   Only this page uses these classes. The page deliberately does not load
+   main.js or booking-bridge.js, so nothing here depends on either.
+   ============================================ */
+
+/* ---------- Quiz page (/book/) shell ---------- */
+.quiz-page { padding-block: clamp(2rem, 5vw, 4rem) clamp(3rem, 7vw, 6rem); background: var(--surface); min-height: 70vh; }
+.quiz { width: min(620px, 100%); margin-inline: auto; }
+.q-noscript { display: none; text-align: center; }
+.q-noscript h1 { font-family: var(--font-display); font-size: var(--fs-h2); text-transform: uppercase; }
+.q-noscript p { color: var(--ink-soft); margin: 1rem 0 1.6rem; }
+.q-trust { text-align: center; font-size: .88rem; font-weight: 600; color: var(--ink-mute); margin-bottom: 1rem; }
+.quiz-progress { display: flex; gap: 6px; justify-content: center; margin-bottom: 1.4rem; }
+.quiz-progress i { width: 30px; height: 5px; border-radius: var(--radius-pill); background: var(--surface-2); transition: background .25s var(--ease); }
+.quiz-progress i.on { background: var(--brand-blue); }
+
+.q-step { display: none; }
+.q-step.is-active { display: block; animation: rise .45s var(--ease) backwards; }
+.q-title { font-family: var(--font-display); font-size: var(--fs-h3); text-transform: uppercase; letter-spacing: var(--tracking-tight); text-align: center; }
+.q-sub { text-align: center; color: var(--ink-soft); font-size: .95rem; margin-top: .5rem; }
+.q-card { background: #fff; border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: clamp(1.1rem, 3.5vw, 1.8rem); margin-top: 1.2rem; }
+
+/* ---------- Step 1: the car cards ---------- */
+.q-cars { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .8rem; }
+.q-carcard { text-align: left; background: var(--surface); border: 2px solid var(--line); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: border-color .2s, transform .2s var(--ease); }
+.q-carcard:hover { transform: translateY(-2px); border-color: var(--brand-blue); }
+.q-carcard.is-sel { border-color: var(--brand-blue); box-shadow: var(--glow-blue); background: #fff; }
+.q-carcard img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; display: block; }
+.q-carcard__body { padding: .6rem .7rem .7rem; display: grid; gap: .15rem; }
+.q-carcard__cls { font-size: .66rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--brand-blue); }
+.q-carcard__name { font-weight: 700; font-size: .95rem; color: var(--brand-navy); }
+.q-carcard__price { font-size: .85rem; color: var(--ink-soft); }
+
+/* ---------- Step 3: the delivery options ---------- */
+.q-opts { display: grid; gap: .6rem; }
+.q-opt { text-align: left; font-weight: 600; background: var(--surface); border: 2px solid var(--line); border-radius: var(--radius); padding: .95rem 1.1rem; cursor: pointer; min-height: 44px; transition: border-color .2s, background .2s; }
+.q-opt:hover { border-color: var(--brand-blue); }
+.q-opt.is-sel { border-color: var(--brand-blue); background: var(--blue-50); }
+.q-notice { margin-top: .9rem; padding: .8rem .95rem; background: var(--orange-50); border-left: 3px solid var(--brand-orange); border-radius: 10px; font-size: .88rem; color: var(--ink-soft); }
+
+/* ---------- Fields ---------- */
+.q-field { margin-top: 1rem; }
+.q-field > span { font-size: .82rem; font-weight: 700; color: var(--brand-navy); }
+.q-count, .q-help { font-size: .78rem; color: var(--ink-mute); }
+.q-count[hidden] { display: none; }
+.q-error { color: var(--brand-orange); font-size: .88rem; font-weight: 700; min-height: 1.2em; margin-top: .8rem; }
+.q-nav { display: flex; justify-content: space-between; align-items: center; gap: .8rem; margin-top: 1rem; }
+
+/* ---------- Calendar: two months, tap to pick ----------
+   Three fixes over the Little John original: Aruba time is handled in
+   quiz.js, and the two here are the touch target and the grid gap. The
+   original cell was 10px of padding around a 13.5px glyph inside a 4px
+   gap grid, which lands under 44px on a 375px viewport. */
+.cal2 { margin-top: .2rem; }
+.cal2-nav-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: .5rem; }
+.cal2-nav { width: 44px; height: 44px; border-radius: 12px; border: 1.5px solid var(--line); background: #fff; font-size: 1.2rem; line-height: 1; color: var(--brand-navy); cursor: pointer; }
+.cal2-nav:hover:not(:disabled) { border-color: var(--brand-blue); color: var(--brand-blue); }
+.cal2-nav:disabled { opacity: .3; cursor: default; }
+.cal2-months { display: grid; grid-template-columns: 1fr; gap: 1.1rem; }
+@media (min-width: 700px) { .cal2-months { grid-template-columns: 1fr 1fr; gap: 1.4rem; } }
+.cal2-title { font-family: var(--font-display); text-transform: uppercase; font-size: .9rem; letter-spacing: .04em; text-align: center; color: var(--brand-navy); margin-bottom: .4rem; }
+.cal2-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+.cal2-grid .dow { font-size: .62rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-mute); padding: .3rem 0; }
+.cal2-day {
+  min-height: 44px; font-size: .88rem; font-weight: 600; color: var(--brand-navy);
+  background: var(--surface); border: 2px solid transparent; border-radius: 10px; cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.cal2-day:hover:not(:disabled):not(.edge) { border-color: var(--brand-blue); }
+.cal2-day:disabled { opacity: .28; cursor: default; }
+.cal2-day.mid { background: var(--blue-100); }
+.cal2-day.edge { background: var(--brand-blue); border-color: var(--brand-blue); color: #fff; font-weight: 800; }
+.cal2-hint { margin-top: .8rem; font-size: .88rem; font-weight: 600; color: var(--brand-blue); min-height: 2.4em; }
+
+/* ---------- Send screen ---------- */
+.q-recap { display: grid; gap: .5rem; margin-bottom: 1.2rem; }
+.q-recap li { display: flex; justify-content: space-between; gap: 1rem; font-size: .95rem; border-bottom: 1px solid var(--line); padding-bottom: .5rem; }
+.q-recap li b { font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-mute); white-space: nowrap; padding-top: .2rem; }
+.q-recap li span { text-align: right; font-weight: 600; color: var(--brand-navy); }
+.q-recap li[hidden] { display: none; }
+.q-estimate { font-size: 1.05rem; font-weight: 700; color: var(--brand-navy); }
+.q-deposit { font-size: .8rem; color: var(--ink-mute); margin-top: .3rem; }
+.q-consent { font-size: .8rem; color: var(--ink-soft); margin: 1.1rem 0 .9rem; line-height: 1.5; }
+/* The one send anchor. It is the only green button in this thumb zone,
+   which is the whole reason .wa-float is not on this page at all. */
+.q-openwa { margin-top: .8rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .q-step.is-active, .q-carcard { animation: none; transition: none; }
+}

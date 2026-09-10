@@ -131,3 +131,35 @@ test('the WhatsApp number matches across all five hardcoded places', () => {
       + `All five places must carry the same number: ${PLACES}`);
   }
 });
+
+const css = read('styles/main.css');
+
+test('the calendar day cell clears a 44px touch target', () => {
+  const rule = css.match(/\.cal2-day\s*\{[^}]*\}/);
+  assert.ok(rule, '.cal2-day must be styled');
+  assert.match(rule[0], /min-height:\s*44px/, 'the Little John original set no minimum height at all');
+});
+
+test('the calendar grid gap drops to 2px so seven columns still fit at 375px', () => {
+  const rule = css.match(/\.cal2-grid\s*\{[^}]*\}/);
+  assert.ok(rule);
+  assert.match(rule[0], /grid-template-columns:\s*repeat\(7,\s*1fr\)/);
+  assert.match(rule[0], /gap:\s*2px/);
+});
+
+test('every quiz class the markup and the renderers use is styled', () => {
+  for (const cls of [
+    '.quiz-page', '.quiz', '.q-noscript', '.q-trust', '.quiz-progress', '.q-step',
+    '.q-title', '.q-sub', '.q-card', '.q-cars', '.q-carcard', '.q-opts', '.q-opt',
+    '.q-notice', '.q-count', '.q-help', '.q-error', '.q-nav', '.q-recap',
+    '.q-estimate', '.q-deposit', '.q-consent', '.q-openwa',
+    '.cal2-nav', '.cal2-months', '.cal2-title', '.cal2-hint',
+  ]) {
+    assert.ok(css.includes(cls), `missing style for ${cls}`);
+  }
+});
+
+test('the quiz styles are appended, not interleaved into the existing sheet', () => {
+  assert.ok(css.indexOf('/* ---------- Quiz page (/book/)') > css.indexOf('@media (prefers-reduced-motion: reduce)'),
+    'the quiz block goes at the end of the file');
+});
