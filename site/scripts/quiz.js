@@ -149,8 +149,16 @@
        tapped anything, and state.carKey starts empty. Throwing here would
        take the whole page down at boot, which is a far worse failure than
        the send screen being briefly incomplete. Every sibling helper that
-       resolves a car guards it the same way. */
-    if (!car) return '';
+       resolves a car guards it the same way.
+
+       A resolved car is not enough on its own: a deep link like
+       /book/?car=kia-rio preselects the car and falls through this first
+       check while the dates and the delivery choice are still empty. Do
+       not compose a message until the state is genuinely complete, or the
+       anchor ends up holding Invalid Date and an undefined delivery line.
+       The name and phone are still allowed to be empty here; step 4 is
+       where those get validated. */
+    if (!car || !req.startDate || !req.endDate || !req.delivery) return '';
     const days = daysBetween(req.startDate, req.endDate);
     const est = estimateFor(car, days, lang);
     const P = priceCfg(lang);

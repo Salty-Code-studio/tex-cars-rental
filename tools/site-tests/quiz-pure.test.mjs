@@ -225,6 +225,35 @@ test('waHref stays a real WhatsApp link when the message is not composed yet', (
   assert.ok(!href.includes('?text='));
 });
 
+/* Final review finding 2: a deep link like /book/?car=kia-rio resolves a
+   car at boot while the dates and delivery choice are still empty. The old
+   guard in buildWaText only checked the car, so it fell through into
+   fmtDate('') and WA_WHERE.en[undefined], and renderSend writes
+   openWa.href on every render pass including boot, so that broken text
+   landed on the anchor immediately, before the customer touched anything.
+   It was invisible only because .q-step { display: none } keeps that
+   anchor out of the tab order, which is CSS standing in for a logic guard.
+   This pins the real fix: a resolved car alone must still produce a bare
+   wa.me link, with no trace of a half built message. */
+test('a deep linked car with no dates and no delivery choice still yields a bare wa.me link', () => {
+  const deepLinked = { carKey: 'kia-rio', startDate: '', endDate: '', delivery: '', deliveryNote: '', name: '', phone: '' };
+  assert.equal(pure.buildWaText(deepLinked, 'en'), '');
+  assert.equal(pure.buildWaText(deepLinked, 'nl'), '');
+  const href = pure.waHref(deepLinked, 'en');
+  assert.match(href, /^https:\/\/wa\.me\/\d+$/, href);
+  assert.ok(!href.includes('?text='), href);
+  assert.equal(/Invalid Date/i.test(href), false, href);
+  assert.equal(/undefined/.test(href), false, href);
+});
+
+test('a resolved car with dates but no delivery choice yet also stays a bare wa.me link', () => {
+  const partial = { carKey: 'kia-rio', startDate: '2026-09-20', endDate: '2026-09-26', delivery: '', deliveryNote: '', name: '', phone: '' };
+  assert.equal(pure.buildWaText(partial, 'en'), '');
+  const href = pure.waHref(partial, 'en');
+  assert.match(href, /^https:\/\/wa\.me\/\d+$/, href);
+  assert.equal(/undefined/.test(href), false, href);
+});
+
 import { loadSite as reload } from './harness.mjs';
 const fleet = reload().window.TEX_FLEET;
 
