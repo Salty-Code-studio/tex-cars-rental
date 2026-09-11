@@ -40,6 +40,17 @@
           <span>TEX<b>CARS</b></span>
         </a>
         <div class="nav__actions" style="margin-left:auto">
+          <!-- Static, always visible, no JavaScript involved. The other two
+               WhatsApp links on this page are both hidden until quiz.js runs:
+               the noscript one only appears with scripting off, and the send
+               anchor sits inside a .q-step that stays display:none until the
+               script activates it. So if quiz.js ever fails to load, this is
+               the only way left to reach Tex from the page that is now the
+               whole booking funnel. Deliberately a plain link and not the
+               floating green bubble, which is left off this page on purpose
+               so it cannot compete with the send button. -->
+          <a class="btn btn--wa" href="https://wa.me/2975945454"
+             data-en="WhatsApp" data-nl="WhatsApp">WhatsApp</a>
           <div class="langs" role="group" aria-label="Language">
             <button class="lang-btn" data-set-lang="en">EN</button>
             <button class="lang-btn" data-set-lang="nl">NL</button>

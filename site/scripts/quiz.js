@@ -126,12 +126,9 @@
      and 8 to 17 digits stay. Stored and messaged in this normalised form.
      Nothing here checks that the number is real or that it is on WhatsApp.
 
-     Retained deliberately: the quiz no longer collects a phone number (the
-     back office inbox it was going to key on was cut, and the customer's
-     number already reaches Tex because they send the WhatsApp message
-     themselves), so nothing in this file calls this function any more. It
-     stays, unused, for the deferred back office work, along with its tests
-     in tools/site-tests/quiz-pure.test.mjs. Do not delete it on cleanup. */
+     Kept for a later phase. Nothing in this file calls it today, because the
+     customer's number reaches Tex with their own WhatsApp message. It is
+     covered by tests. Do not delete it on cleanup. */
   function normalisePhone(raw) {
     const cleaned = String(raw == null ? '' : raw).replace(/[\s.()-]/g, '');
     return /^\+?\d{8,17}$/.test(cleaned) ? cleaned : '';
