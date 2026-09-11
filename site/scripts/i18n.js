@@ -12,7 +12,15 @@
   const SUPPORTED = ['en', 'nl'];
 
   const DEFAULT = (() => {
-    const stored = localStorage.getItem(KEY);
+    let stored = null;
+    try {
+      stored = localStorage.getItem(KEY);
+    } catch (err) {
+      // Safari "Block All Cookies" and partitioned storage in some in-app
+      // webviews throw SecurityError here. This is a language preference,
+      // not customer data, so treat it as no saved preference and move on.
+      stored = null;
+    }
     if (stored && SUPPORTED.includes(stored)) return stored;
     const nav = (navigator.language || 'en').toLowerCase();
     if (nav.startsWith('nl')) return 'nl';
@@ -36,7 +44,12 @@
     document.querySelectorAll('.lang-btn').forEach((btn) => {
       btn.classList.toggle('is-active', btn.dataset.setLang === lang);
     });
-    localStorage.setItem(KEY, lang);
+    try {
+      localStorage.setItem(KEY, lang);
+    } catch (err) {
+      // Same SecurityError case as above. The preference just will not
+      // persist across visits, which is fine for a preference this light.
+    }
     window.dispatchEvent(new CustomEvent('langchange', { detail: { lang } }));
   }
 

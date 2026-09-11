@@ -1,0 +1,619 @@
+/* ============================================
+   quiz.js, Tex Cars WhatsApp request quiz (/book/)
+   Four steps, then a send screen. Nothing here reserves a car, and
+   nothing here saves, sends or stores anything: the whole file is a pure
+   function from four answers to one wa.me link. There is deliberately no
+   network call of any kind and no browser storage of any kind in this
+   file. If you are adding one, you are changing the design.
+
+   Ported from the Little John Scooters quiz engine, with its three real
+   calendar bugs fixed: Aruba time instead of device time, 44px touch
+   targets, and a mis-tap that announces itself instead of silently
+   wiping both dates.
+
+   The pure helpers below are exported on window.TEX_QUIZ so the Node
+   tests in tools/site-tests/ can load this exact file through node:vm
+   and check the maths without a browser and without a bundler. Every
+   one of them takes its language explicitly; only the DOM layer calls
+   lang(). Nothing touches the DOM until DOMContentLoaded, which is what
+   makes loading this file outside a browser safe.
+   ============================================ */
+(() => {
+  'use strict';
+
+  const CFG = window.TEX_CONFIG || {};
+  const FLEET = window.TEX_FLEET || [];
+  const WA_NUMBER = CFG.waNumber || '2975945454';
+
+  const MAX_SPAN_DAYS = 90;      // mirrors settings.maxRentalDays in the app
+  const MAX_AHEAD_DAYS = 365;    // mirrors settings.maxAdvanceDays in the app
+  const MAX_AHEAD_MONTHS = 12;   // how far the calendar arrows go
+  const NOTE_MAX = 200;
+  const NOTE_COUNTER_FROM = 150;
+
+  /* ---------- dates: all ISO strings, all UTC maths, no device timezone ---------- */
+  const pad = (n) => String(n).padStart(2, '0');
+  const isoOf = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`;
+  const parts = (iso) => iso.split('-').map(Number);
+
+  /* Aruba has no daylight saving, so en-CA in America/Aruba is exact. */
+  const arubaTodayISO = () =>
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Aruba' }).format(new Date());
+
+  function addDaysISO(iso, n) {
+    const [y, m, d] = parts(iso);
+    const t = new Date(Date.UTC(y, m - 1, d + n));
+    return isoOf(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate());
+  }
+
+  function daysBetween(fromISO, untilISO) {
+    if (!fromISO || !untilISO) return 0;
+    const [ay, am, ad] = parts(fromISO);
+    const [by, bm, bd] = parts(untilISO);
+    return Math.round((Date.UTC(by, bm - 1, bd) - Date.UTC(ay, am - 1, ad)) / 86400000);
+  }
+
+  /* ---------- pricing ----------
+     Same currency rule as the homepage, priceCfg() in scripts/main.js:11-15:
+     Papiamento shows Aruban florin, every other language shows US dollars.
+     In practice that is always dollars today, because i18n.js:12 limits the
+     site to en and nl. The full rule is implemented anyway so that
+     re-enabling Papiamento later cannot leave florin customers looking at
+     dollar prices.
+
+     depositKey is the one field main.js's priceCfg does not have. That
+     function returns { sym, day, week, month } and nothing else; the deposit
+     lives per car in fleet.js as deposit (Afl. 500) and usdDeposit ($250).
+     Spec section 5 requires the deposit footnote, so the key is named here
+     rather than picked by a second currency test somewhere else. */
+  const carBySlug = (slug) => FLEET.find((c) => c.slug === slug) || null;
+
+  function priceCfg(lang) {
+    return lang === 'pap'
+      ? { sym: 'Afl.', day: 'priceDay', week: 'priceWeek', month: 'priceMonth', depositKey: 'deposit' }
+      : { sym: '$', day: 'usdDay', week: 'usdWeek', month: 'usdMonth', depositKey: 'usdDeposit' };
+  }
+
+  const money = (amount, P) => (P.sym === '$' ? `$${amount}` : `${P.sym} ${amount}`);
+
+  /* Advisory only. The customer sees this number so the WhatsApp
+     conversation starts from the same figure; nothing is priced from it. */
+  function estimateFor(car, days, lang) {
+    if (!car || !(days > 0)) return null;
+    const P = priceCfg(lang);
+    const dayRate = car[P.day], weekRate = car[P.week], monthRate = car[P.month];
+
+    const months = days >= 30 ? Math.floor(days / 30) : 0;
+    const rest = days - months * 30;
+    const weeks = Math.floor(rest / 7);
+    const restDays = rest - weeks * 7;
+
+    let weekAndDay = weeks * weekRate + restDays * dayRate;
+    if (weekAndDay > (weeks + 1) * weekRate) weekAndDay = (weeks + 1) * weekRate;
+
+    let total = months * monthRate + weekAndDay;
+    if (total > (months + 1) * monthRate) total = (months + 1) * monthRate;
+    return total;
+  }
+
+  /* ---------- display formatting ----------
+     Dates are formatted from a UTC instant with timeZone UTC, so a phone
+     sitting on Central European time never renders a day early or late. */
+  const locale = (lang) => (lang === 'nl' ? 'nl-NL' : 'en-GB');
+
+  function fmtDate(iso, lang) {
+    const [y, m, d] = parts(iso);
+    return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(locale(lang), {
+      weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC',
+    });
+  }
+
+  /* CAREFUL: m here is ZERO based, so 2 is March, matching Date.UTC and the
+     calendar's own month cursor. Three lines up, fmtDate's m is the ONE based
+     month straight off the ISO string, which is why it subtracts 1. Two live
+     conventions for the same letter in one file, so read the call site before
+     you copy either. Date.UTC rolls an out of range month over silently
+     (month 12 gives January of the next year, which the calendar relies on),
+     so passing a one based month here does not throw, it just titles the
+     wrong month. */
+  function monthLabel(y, m, lang) {
+    return new Date(Date.UTC(y, m, 1)).toLocaleDateString(locale(lang), {
+      month: 'long', year: 'numeric', timeZone: 'UTC',
+    });
+  }
+
+  /* Spaces, dashes, dots and brackets come out; an optional leading plus
+     and 8 to 17 digits stay. Stored and messaged in this normalised form.
+     Nothing here checks that the number is real or that it is on WhatsApp.
+
+     Kept for a later phase. Nothing in this file calls it today, because the
+     customer's number reaches Tex with their own WhatsApp message. It is
+     covered by tests. Do not delete it on cleanup. */
+  function normalisePhone(raw) {
+    const cleaned = String(raw == null ? '' : raw).replace(/[\s.()-]/g, '');
+    return /^\+?\d{8,17}$/.test(cleaned) ? cleaned : '';
+  }
+
+  /* ---------- the prefilled WhatsApp message ----------
+     Built from state the browser already holds. This message IS the
+     request: it is the only copy of what the customer chose, and it lives
+     in their chat with Tex from the moment they press send in WhatsApp.
+     Nothing on this page keeps a second copy. */
+  const WA_WHERE = {
+    en: { airport: 'bring it to the airport', hotel: 'bring it to my hotel', pickup: 'I collect it at Tex' },
+    nl: { airport: 'breng hem naar het vliegveld', hotel: 'breng hem naar mijn hotel', pickup: 'ik haal hem op bij Tex' },
+  };
+
+  function buildWaText(req, lang) {
+    const nl = lang === 'nl';
+    const car = carBySlug(req.carKey);
+    /* No car chosen yet, or a stale ?car= slug that is not in the fleet.
+       Return empty rather than throwing: renderSend writes openWa.href on
+       every render pass, including the first one before the customer has
+       tapped anything, and state.carKey starts empty. Throwing here would
+       take the whole page down at boot, which is a far worse failure than
+       the send screen being briefly incomplete. Every sibling helper that
+       resolves a car guards it the same way.
+
+       A resolved car is not enough on its own: a deep link like
+       /book/?car=kia-rio preselects the car and falls through this first
+       check while the dates and the delivery choice are still empty. Do
+       not compose a message until the state is genuinely complete, or the
+       anchor ends up holding Invalid Date and an undefined delivery line.
+       The name is still allowed to be empty here; step 4 is where it
+       gets validated. */
+    if (!car || !req.startDate || !req.endDate || !req.delivery) return '';
+    const days = daysBetween(req.startDate, req.endDate);
+    const est = estimateFor(car, days, lang);
+    const P = priceCfg(lang);
+    const from = fmtDate(req.startDate, lang);
+    const until = fmtDate(req.endDate, lang);
+    const where = (nl ? WA_WHERE.nl : WA_WHERE.en)[req.delivery];
+    const lines = nl
+      ? [
+          `Hoi Tex, ik wil graag de ${car.name} (${car.class}) huren.`,
+          `Van: ${from}`,
+          `Tot: ${until} (${days} ${days === 1 ? 'dag' : 'dagen'})`,
+          `Waar: ${where}`,
+          req.deliveryNote ? `Opmerking: ${req.deliveryNote}` : null,
+          `Naam: ${req.name}`,
+          est ? `Schatting die ik zag: ${money(est, P)}` : null,
+        ]
+      : [
+          `Hi Tex, I'd like to rent the ${car.name} (${car.class}).`,
+          `From: ${from}`,
+          `Until: ${until} (${days} ${days === 1 ? 'day' : 'days'})`,
+          `Where: ${where}`,
+          req.deliveryNote ? `Note: ${req.deliveryNote}` : null,
+          `Name: ${req.name}`,
+          est ? `Estimate I saw: ${money(est, P)}` : null,
+        ];
+    return lines.filter(Boolean).join('\n');
+  }
+
+  /* With nothing chosen yet the link is a bare wa.me with no ?text=, so the
+     anchor in the markup is always a real, tappable WhatsApp link. That is
+     the no-JS and half-filled fallback the G1 rule asks for: WhatsApp opens
+     in every case, even if the message has not been composed. */
+  const waHref = (req, lang) => {
+    const text = buildWaText(req, lang);
+    return text
+      ? `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(text)}`
+      : `https://wa.me/${WA_NUMBER}`;
+  };
+
+  /* ---------- micro translations for JavaScript rendered content ----------
+     Static copy lives in data-en / data-nl in the markup and is handled by
+     scripts/i18n.js. Only strings this file builds live here. */
+  const T = {
+    en: {
+      perDay: '/day', days: (n) => `${n} ${n === 1 ? 'day' : 'days'}`,
+      dows: ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'],
+      hintStart: 'Tap your pick-up day.',
+      hintEnd: 'Now tap your return day.',
+      moved: (d) => `Start date moved to ${d}. Now tap your return day.`,
+      prevMonth: 'Previous month', nextMonth: 'Next month',
+      errCar: 'Tap the car you would like.',
+      errDates: 'Tap a pick-up day and a return day on the calendar.',
+      errDatePast: 'That pick-up day has passed. Tap a new one.',
+      errSpan: 'Ninety days is the longest we can take here. Ask Tex on WhatsApp for a longer rental.',
+      errDelivery: 'Tell us where you would like the car.',
+      errName: 'We need a name so Tex knows who to answer.',
+      estimate: (m, n) => `Estimate: ${m} for ${n}. Tex confirms the final price on WhatsApp.`,
+      deposit: (m) => `A refundable deposit of ${m} is arranged when you pick the car up. It is not part of this estimate.`,
+    },
+    nl: {
+      perDay: '/dag', days: (n) => `${n} ${n === 1 ? 'dag' : 'dagen'}`,
+      dows: ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'],
+      hintStart: 'Tik je ophaaldag aan.',
+      hintEnd: 'Tik nu je terugbrengdag aan.',
+      moved: (d) => `Startdatum verplaatst naar ${d}. Tik nu je terugbrengdag aan.`,
+      prevMonth: 'Vorige maand', nextMonth: 'Volgende maand',
+      errCar: 'Tik de auto aan die je wil.',
+      errDates: 'Tik een ophaaldag en een terugbrengdag aan op de kalender.',
+      errDatePast: 'Die ophaaldag is al voorbij. Tik een nieuwe aan.',
+      errSpan: 'Negentig dagen is het langste dat hier kan. Vraag Tex op WhatsApp naar een langere huur.',
+      errDelivery: 'Vertel ons waar je de auto wil hebben.',
+      errName: 'We hebben een naam nodig, zodat Tex weet wie hij antwoordt.',
+      estimate: (m, n) => `Schatting: ${m} voor ${n}. Tex bevestigt de definitieve prijs via WhatsApp.`,
+      deposit: (m) => `Een borg van ${m} regel je bij het ophalen. Die valt buiten deze schatting.`,
+    },
+  };
+  const t = (lang) => T[lang] || T.en;
+
+  const esc = (s) => String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+  const isActiveCar = window.TEX_ACTIVE || ((c) => !c.status || c.status === 'active');
+
+  /* The inner spans are q-cc-*, not q-carcard__*: see the comment on those
+     rules in styles/main.css for why the BEM name had to change. */
+  function carCardsHTML(fleet, selectedSlug, lang) {
+    const P = priceCfg(lang);
+    return fleet.filter(isActiveCar).map((car) => `
+      <button type="button" class="q-carcard${car.slug === selectedSlug ? ' is-sel' : ''}" data-car="${esc(car.slug)}">
+        <img src="../${esc(car.image)}" alt="${esc(car.name)}" loading="lazy"
+             onerror="this.src='../assets/img/car-placeholder.svg'">
+        <span class="q-cc-body">
+          <span class="q-cc-cls">${esc(car.class)}</span>
+          <span class="q-cc-name">${esc(car.name)}</span>
+          <span class="q-cc-price">${money(car[P.day], P)}${t(lang).perDay}</span>
+        </span>
+      </button>`).join('');
+  }
+
+  /* ---------- the calendar ----------
+     Two months at a time, tap the pick-up day then the return day.
+     Ported from the Little John engine with its three real bugs fixed:
+     today comes from Aruba, cells clear 44px (see main.css), and a mis-tap
+     announces itself instead of silently wiping both dates. */
+  function pickDay(s, iso) {
+    const restarting = !s.startDate || (s.startDate && s.endDate) || iso <= s.startDate;
+    if (restarting) return { startDate: iso, endDate: '', moved: Boolean(s.startDate) };
+    return { startDate: s.startDate, endDate: iso, moved: false };
+  }
+
+  function hintText(s, lang, moved) {
+    const L = t(lang);
+    if (!s.startDate) return L.hintStart;
+    if (!s.endDate) return moved ? L.moved(fmtDate(s.startDate, lang)) : L.hintEnd;
+    const n = daysBetween(s.startDate, s.endDate);
+    return `${fmtDate(s.startDate, lang)} \u2192 ${fmtDate(s.endDate, lang)} \u00b7 ${L.days(n)}`;
+  }
+
+  /* Task 8 review: without this, a customer could paint a range past the
+     ninety day span right on the calendar, see a clean blue fill and a
+     day count, and only be told it was too long after tapping Continue.
+     Once a start is picked and there is no end yet, days more than
+     MAX_SPAN_DAYS beyond the start are disabled here too, on top of the
+     365 day cap. validateStep keeps its own span check as well, since the
+     calendar is not the only way this state can be reached. */
+  function monthBlockHTML(y, m, s, todayISO, maxISO, lang) {
+    let html = `<div class="cal2-month"><p class="cal2-title">${esc(monthLabel(y, m, lang))}</p><div class="cal2-grid">`;
+    for (const d of t(lang).dows) html += `<span class="dow">${d}</span>`;
+    const lead = (new Date(Date.UTC(y, m, 1)).getUTCDay() + 6) % 7; // Monday first
+    for (let i = 0; i < lead; i++) html += '<span></span>';
+    const dim = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    const spanCapISO = s.startDate && !s.endDate ? addDaysISO(s.startDate, MAX_SPAN_DAYS) : '';
+    for (let d = 1; d <= dim; d++) {
+      const iso = isoOf(y, m, d);
+      let cls = 'cal2-day';
+      if (iso === s.startDate || (s.endDate && iso === s.endDate)) cls += ' edge';
+      else if (s.startDate && s.endDate && iso > s.startDate && iso < s.endDate) cls += ' mid';
+      const off = iso < todayISO || iso > maxISO || (spanCapISO && iso > spanCapISO) ? ' disabled' : '';
+      html += `<button type="button" class="${cls}" data-day="${iso}"${off}>${d}</button>`;
+    }
+    return html + '</div></div>';
+  }
+
+  function calendarHTML(view, s, todayISO, lang, moved) {
+    const L = t(lang);
+    const maxISO = addDaysISO(todayISO, MAX_AHEAD_DAYS);
+    const [ty, tm] = parts(todayISO);
+    const delta = (view.y - ty) * 12 + (view.m - (tm - 1));
+    const next = { y: view.m === 11 ? view.y + 1 : view.y, m: (view.m + 1) % 12 };
+    return `<div class="cal2-nav-row">
+        <button type="button" class="cal2-nav" data-cal="-1" aria-label="${L.prevMonth}"${delta <= 0 ? ' disabled' : ''}>&lsaquo;</button>
+        <button type="button" class="cal2-nav" data-cal="1" aria-label="${L.nextMonth}"${delta >= MAX_AHEAD_MONTHS - 1 ? ' disabled' : ''}>&rsaquo;</button>
+      </div>
+      <div class="cal2-months">${monthBlockHTML(view.y, view.m, s, todayISO, maxISO, lang)}${monthBlockHTML(next.y, next.m, s, todayISO, maxISO, lang)}</div>
+      <p class="cal2-hint">${esc(hintText(s, lang, moved))}</p>`;
+  }
+
+  /* ---------- validation ----------
+     Nothing on the other side re-checks any of this, because there is no
+     other side: the browser is the only place these rules run. They exist
+     so the customer is told before they compose a message Tex would only
+     have to correct on WhatsApp. The three date rules are the ones from
+     spec section 4: a return day after the pick-up day, at most 90 days of
+     span, and a start no earlier than today in Aruba and no more than 365
+     days ahead. */
+  function validateStep(kind, s, todayISO, lang) {
+    const L = t(lang);
+    if (kind === 'car') return carBySlug(s.carKey) ? '' : L.errCar;
+
+    if (kind === 'dates') {
+      const days = daysBetween(s.startDate, s.endDate);
+      if (!s.startDate || !s.endDate || days <= 0) return L.errDates;
+      /* Reachable in ordinary use: a customer picks today as pick-up, then
+         sits on this step across the Aruba midnight boundary. todayISO is
+         recomputed fresh here, but the calendar's disabled-day rendering is
+         not refreshed until the next render pass, so the stale selection is
+         still shown highlighted. errDates ("Tap a pick-up day...") would
+         misdescribe that: the customer did tap a day, it just aged out from
+         under them. This message says what actually happened instead. */
+      if (s.startDate < todayISO) return L.errDatePast;
+      if (s.startDate > addDaysISO(todayISO, MAX_AHEAD_DAYS)) return L.errDates;
+      if (days > MAX_SPAN_DAYS) return L.errSpan;
+      return '';
+    }
+
+    if (kind === 'delivery') return ['airport', 'hotel', 'pickup'].includes(s.delivery) ? '' : L.errDelivery;
+
+    if (kind === 'who') {
+      const name = String(s.name || '').trim();
+      if (name.length < 2 || name.length > 60) return L.errName;
+      return '';
+    }
+    return '';
+  }
+
+  /* ---------- the send screen ---------- */
+  const RECAP_WHERE = {
+    en: { airport: 'Bring it to the airport', hotel: 'Bring it to my hotel', pickup: 'I collect it at Tex' },
+    nl: { airport: 'Breng hem naar het vliegveld', hotel: 'Breng hem naar mijn hotel', pickup: 'Ik haal hem op bij Tex' },
+  };
+
+  function estimateSentence(s, lang) {
+    const car = carBySlug(s.carKey);
+    const days = daysBetween(s.startDate, s.endDate);
+    const est = estimateFor(car, days, lang);
+    if (est === null) return '';
+    return t(lang).estimate(money(est, priceCfg(lang)), t(lang).days(days));
+  }
+
+  /* A footnote, deliberately outside the estimate. */
+  function depositSentence(s, lang) {
+    const car = carBySlug(s.carKey);
+    if (!car) return '';
+    const P = priceCfg(lang);
+    return t(lang).deposit(money(car[P.depositKey], P));
+  }
+
+  function recapValues(s, lang) {
+    const car = carBySlug(s.carKey);
+    const days = daysBetween(s.startDate, s.endDate);
+    const est = estimateFor(car, days, lang);
+    return {
+      car: car ? `${car.name} (${car.class})` : '',
+      from: s.startDate ? fmtDate(s.startDate, lang) : '',
+      until: s.endDate ? fmtDate(s.endDate, lang) : '',
+      est: est === null ? '' : money(est, priceCfg(lang)),
+      where: (lang === 'nl' ? RECAP_WHERE.nl : RECAP_WHERE.en)[s.delivery] || '',
+      note: s.deliveryNote || '',
+      name: s.name || '',
+    };
+  }
+
+  const PURE = {
+    isoOf, arubaTodayISO, addDaysISO, daysBetween,
+    carBySlug, priceCfg, money, estimateFor,
+    fmtDate, monthLabel, normalisePhone,
+    buildWaText, waHref, carCardsHTML,
+    pickDay, hintText, monthBlockHTML, calendarHTML,
+    validateStep, estimateSentence, depositSentence, recapValues,
+    MAX_SPAN_DAYS, MAX_AHEAD_DAYS, MAX_AHEAD_MONTHS,
+    NOTE_MAX, NOTE_COUNTER_FROM,
+  };
+  window.TEX_QUIZ = PURE;
+
+  /* ============================================
+     DOM layer. Nothing below runs until DOMContentLoaded, which is what
+     lets the Node tests load this file with a stub document.
+     ============================================ */
+  const lang = () => (window.TEX_i18n ? window.TEX_i18n.getLang() : 'en');
+
+  const state = {
+    carKey: '', startDate: '', endDate: '',
+    delivery: '', deliveryNote: '', name: '',
+  };
+  const view = { y: 0, m: 0 };
+  let moved = false;   // true right after a mis-tap reset, so the hint says so
+
+  let steps = [], dots = [], current = 0;
+  let els = {};
+
+  /* moveFocus is false for the very first paint. Announcing and focusing a
+     step is right when the CUSTOMER moved, and wrong on arrival: it drags
+     keyboard and screen reader focus off the page's natural entry point,
+     skipping the logo and the language toggle before anyone has touched
+     anything, and it fires an aria-live announcement about a step change
+     that never happened. Scrolling to the top on arrival is equally
+     pointless, since the browser is already there. */
+  function show(i, moveFocus = true) {
+    current = Math.max(0, Math.min(steps.length - 1, i));
+    steps.forEach((s, k) => s.classList.toggle('is-active', k === current));
+    dots.forEach((d, k) => d.classList.toggle('on', k <= current));
+    clearError();
+    const active = steps[current];
+    if (active && moveFocus) {
+      const heading = active.querySelector('.q-title');
+      const announce = document.getElementById('qStepAnnounce');
+      if (announce) announce.textContent = heading ? heading.textContent : '';
+      active.focus();
+    }
+    if (moveFocus) window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function setError(msg) {
+    const box = steps[current] && steps[current].querySelector('.q-error');
+    if (box) box.textContent = msg;
+  }
+  const clearError = () => setError('');
+
+  function renderCars() {
+    if (!els.cars) return;
+    els.cars.innerHTML = carCardsHTML(FLEET, state.carKey, lang());
+  }
+
+  function renderCal() {
+    if (!els.cal) return;
+    els.cal.innerHTML = calendarHTML(view, state, arubaTodayISO(), lang(), moved);
+  }
+
+  function renderSend() {
+    if (!els.recap || !els.recap.rCar) return;
+    const l = lang();
+    const v = recapValues(state, l);
+    els.recap.rCar.textContent = v.car;
+    els.recap.rFrom.textContent = v.from;
+    els.recap.rUntil.textContent = v.until;
+    els.recap.rEst.textContent = v.est;
+    els.recap.rWhere.textContent = v.where;
+    els.recap.rNote.textContent = v.note;
+    els.recap.rName.textContent = v.name;
+    if (els.estRow) els.estRow.hidden = !v.est;
+    if (els.noteRow) els.noteRow.hidden = !v.note;
+    if (els.estimate) els.estimate.textContent = estimateSentence(state, l);
+    if (els.deposit) els.deposit.textContent = depositSentence(state, l);
+    /* The single send anchor. Its markup href is a plain wa.me link that
+       works with JavaScript off; here it is replaced by the full request,
+       every time this screen is drawn and every time the language changes.
+       There is nothing to await, so there is never a window in which the
+       anchor is stale: by the time the customer can see it, it is right. */
+    if (els.openWa) els.openWa.href = waHref(state, l);
+  }
+
+  /* Keeps every role=radio option group (today just delivery, step 3) in
+     sync: aria-checked="true" on the chosen button, "false" on the rest,
+     so a screen reader group never gets stuck announcing "not checked".
+     The is-sel class is toggled on the same elements in the same pass, so
+     the visible state (main.css:481's border and background) and the ARIA
+     state can never drift apart. */
+  function syncRadioGroup(container, selectedValue, dataAttr) {
+    if (!container) return;
+    container.querySelectorAll('[role="radio"]').forEach((btn) => {
+      const on = btn.dataset[dataAttr] === selectedValue;
+      btn.setAttribute('aria-checked', on ? 'true' : 'false');
+      btn.classList.toggle('is-sel', on);
+    });
+  }
+
+  function boot() {
+    steps = Array.from(document.querySelectorAll('.q-step'));
+    dots = Array.from(document.querySelectorAll('.quiz-progress i'));
+    els = {
+      cars: document.getElementById('qCars'),
+      cal: document.getElementById('qCal'),
+      note: document.getElementById('qNote'),
+      noteCount: document.getElementById('qNoteCount'),
+      name: document.getElementById('qName'),
+      estimate: document.getElementById('qEstimate'),
+      deposit: document.getElementById('qDeposit'),
+      openWa: document.getElementById('qOpenWa'),
+      recap: {
+        rCar: document.getElementById('rCar'), rFrom: document.getElementById('rFrom'),
+        rUntil: document.getElementById('rUntil'), rEst: document.getElementById('rEst'),
+        rWhere: document.getElementById('rWhere'), rNote: document.getElementById('rNote'),
+        rName: document.getElementById('rName'),
+      },
+      estRow: document.getElementById('rEstRow'),
+      noteRow: document.getElementById('rNoteRow'),
+    };
+
+    // Arrived from a fleet card: /book/?car=hyundai-i10 preselects it.
+    // An unknown or stale slug falls through harmlessly to no selection.
+    const wanted = new URLSearchParams(window.location.search).get('car');
+    if (wanted && carBySlug(wanted)) state.carKey = wanted;
+
+    const [ty, tm] = arubaTodayISO().split('-').map(Number);
+    view.y = ty; view.m = tm - 1;
+
+    if (els.cal) {
+      els.cal.addEventListener('click', (e) => {
+        const nav = e.target.closest('[data-cal]');
+        if (nav && !nav.disabled) {
+          const step = Number(nav.dataset.cal);
+          const t2 = new Date(Date.UTC(view.y, view.m + step, 1));
+          view.y = t2.getUTCFullYear(); view.m = t2.getUTCMonth();
+          renderCal();
+          return;
+        }
+        const day = e.target.closest('[data-day]');
+        if (!day || day.disabled) return;
+        clearError();
+        const picked = pickDay(state, day.dataset.day);
+        state.startDate = picked.startDate;
+        state.endDate = picked.endDate;
+        moved = picked.moved;
+        renderCal();
+      });
+    }
+
+    if (els.note) {
+      els.note.addEventListener('input', () => {
+        state.deliveryNote = els.note.value.slice(0, NOTE_MAX).trim();
+        // the counter only appears once the 200 character cap is in sight
+        const used = els.note.value.length;
+        els.noteCount.hidden = used < NOTE_COUNTER_FROM;
+        els.noteCount.textContent = `${used} / ${NOTE_MAX}`;
+      });
+    }
+    if (els.name) els.name.addEventListener('input', () => { state.name = els.name.value.trim(); clearError(); });
+
+    if (els.cars) {
+      els.cars.addEventListener('click', (e) => {
+        const card = e.target.closest('[data-car]');
+        if (!card) return;
+        state.carKey = card.dataset.car;
+        clearError();
+        renderCars();
+        show(current + 1);
+      });
+    }
+
+    document.querySelectorAll('.q-opts[role="radiogroup"]').forEach((group) => {
+      group.addEventListener('click', (e) => {
+        const opt = e.target.closest('[data-delivery]');
+        if (!opt) return;
+        state.delivery = opt.dataset.delivery;
+        syncRadioGroup(group, state.delivery, 'delivery');
+        clearError();
+      });
+    });
+
+    document.querySelectorAll('[data-next]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const msg = validateStep(steps[current].dataset.validate, state, arubaTodayISO(), lang());
+        if (msg) { setError(msg); return; }
+        renderSend();
+        show(current + 1);
+      }));
+    document.querySelectorAll('[data-back]').forEach((b) =>
+      b.addEventListener('click', () => show(current - 1)));
+
+    render();
+    show(0, false);
+  }
+
+  /* Everything the language can change is re-rendered here, which is why
+     the estimate never gets stranded in the previous language. A visible
+     validation message is state-driven text too: if the current step is
+     already showing one, it is re-run through validateStep so the message
+     itself flips language along with everything else, instead of sitting
+     there in the language the customer just left. */
+  function render() {
+    renderCars();
+    renderCal();
+    renderSend();
+    const active = steps[current];
+    const box = active && active.querySelector('.q-error');
+    if (box && box.textContent) {
+      setError(validateStep(active.dataset.validate, state, arubaTodayISO(), lang()));
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', boot);
+  window.addEventListener('langchange', render);
+})();

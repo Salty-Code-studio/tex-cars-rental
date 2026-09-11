@@ -4,27 +4,29 @@
 
 **Goal:** Build the four step WhatsApp request quiz at `tex-cars.com/book/` on the static marketing site, and repoint every booking surface on the site at it.
 
-**Architecture:** A new plain script `site/scripts/quiz.js` drives a new static page `site/book/index.html`, which loads exactly four scripts and nothing else. All pure logic (Aruba date helpers, the estimator, the phone normaliser, the WhatsApp message builder) is defined at the top of `quiz.js` and exported on `window.TEX_QUIZ`, so a Node test harness can load the real shipped file through `node:vm` with stub DOM globals and assert on it without a bundler; the DOM layer boots only on `DOMContentLoaded`, so loading the file in Node does no DOM work.
+**The quiz saves nothing.** This is the owner's decision of 2026-09-10, in their words: "Lets leave the desk out for now just build the whatsapp booking a throw it live, we will do the desk another time." The quiz is a message composer and nothing else. There is no endpoint, no database row, no request inbox, no back office. Everything the customer types stays in the tab until they navigate to WhatsApp, and then it lives only in their own chat with Tex. Spec sections 7, 8, 9, 10 and 12 describe the saved request path and are superseded for this piece of work. The desk side can be built later on top of this page without changing a single one of the four steps.
+
+**Architecture:** A new plain script `site/scripts/quiz.js` drives a new static page `site/book/index.html`, which loads exactly four scripts and nothing else. All pure logic (Aruba date helpers, the estimator, the phone normaliser, the WhatsApp message builder) is defined at the top of `quiz.js` and exported on `window.TEX_QUIZ`, so a Node test harness can load the real shipped file through `node:vm` with stub DOM globals and assert on it without a bundler; the DOM layer boots only on `DOMContentLoaded`, so loading the file in Node does no DOM work. The whole engine is a pure function from four answers to one `wa.me` URL, which is why it needs no network of any kind.
 
 **Tech Stack:** Plain ES2020 browser JavaScript (no build step, no bundler, no framework), static HTML, hand written CSS on the existing `tokens.css` custom properties, Node 22 built in test runner (`node --test`) plus `node:vm` for the harness, `python3 -m http.server` for manual checks.
 
 ## Global Constraints
 
 - No em dash and no double hyphen anywhere in prose, in copy, in comments or in commit messages. Long command flags in shell commands are exempt.
-- Scope discipline, the owner's explicit instruction: "don't change anything I didn't ask for". Everything in spec sections 4, 5, 6 and 11 is in scope, plus two things the owner added on 2026-09-09: the three homepage claims that stop being true once the wizard is fenced (Task 16) and the copy review sheet (Task 18). Nothing else is. No drive-by refactors, no reformatting, no dependency bumps, no renaming, no cleanups the spec does not name.
-- No deploy. This plan stops at "built and tested locally". No `git subtree push`, no `git push`, no `wrangler deploy`, no `crane push`, no `npm run db:migrate`. Spec section 14 is out of scope.
-- This is the parent repo only: `/Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental`. The app at `app/` is a separate git repo and is excluded by `.gitignore:2`. Never `git add app/`.
+- Scope discipline, the owner's explicit instruction: "don't change anything I didn't ask for". Everything in spec sections 4, 5, 6 and 11 that survives the no-storage decision is in scope, plus two things the owner added on 2026-09-09: the three homepage claims that stop being true once the wizard is fenced (Task 15) and the copy review sheet (Task 17). Nothing else is. No drive-by refactors, no reformatting, no dependency bumps, no renaming, no cleanups the spec does not name.
+- **The quiz stores nothing and transmits nothing.** No `fetch`, no `XMLHttpRequest`, no `sendBeacon`, no form `action`, no `localStorage`, no cookie, no analytics, no third party script. The only thing that ever leaves this page is the customer's own navigation to `wa.me`, which they start by tapping a link. A test asserts this against the shipped `quiz.js`, because it is the whole design and a single well meant `fetch` would undo it.
+- No deploy. This plan stops at "built and tested locally". No `git subtree push`, no `git push`. Spec section 14 is out of scope.
+- This is the parent repo only: `/Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental`. The app at `app/` is a separate git repo and is excluded by `.gitignore:2`. Never `git add app/`. Nothing in this plan touches the app at all.
 - The quiz page loads EXACTLY four scripts: `data/config.js`, `data/fleet.js`, `scripts/i18n.js`, `scripts/quiz.js`. NOT `main.js`. NOT `booking-bridge.js`.
 - The quiz page does NOT contain the `.wa-float` markup at all. Not hidden with CSS, simply not on the page.
-- WhatsApp handoff is same tab, on a real anchor, with NO `target` attribute anywhere on the quiz page. Timeout 4000 ms.
-- The WhatsApp anchor's `href` is written BEFORE the fetch is fired.
-- Guardrail G1: WhatsApp opens in every case, including save failure, timeout, 4xx, 5xx, offline and JavaScript disabled.
+- WhatsApp handoff is same tab, on a real anchor, with NO `target` attribute anywhere on the quiz page. One anchor, one tap.
+- The WhatsApp anchor carries a real `href` in the shipped markup, and the DOM layer rewrites it from state every time the send screen renders. There is nothing to wait for, so there is never a moment when the anchor is stale or missing.
+- Guardrail G1: WhatsApp opens in every case, including JavaScript disabled or broken.
 - Guardrail G2: the quiz never reserves anything and never checks availability.
 - Only English and Dutch. `site/scripts/i18n.js:12` sets `SUPPORTED = ['en', 'nl']`. Copy goes through the existing `data-en` / `data-nl` engine, NOT a duplicated `/nl/` directory.
-- Retention number 90 appears in the consent line and must match the app side constant exactly.
-- The consent line and the estimate sentence are legal and commercial commitments. Copy them verbatim from the spec, character for character.
+- The estimate sentence and the deposit footnote are commercial commitments. Copy them verbatim from spec section 5, character for character.
+- The consent line is **not** spec copy. Spec section 6's consent line describes a save that no longer happens, so it is superseded; Task 5 writes the replacement and Task 17 puts it in front of Tex.
 - Currency rule is `priceCfg()` from `site/scripts/main.js:11-15`: `pap` gives Aruban florin (`priceDay`, `priceWeek`, `priceMonth`), every other language gives US dollars (`usdDay`, `usdWeek`, `usdMonth`). That function returns exactly four keys, `{ sym, day, week, month }`, and **no deposit key at all**. The deposit is not part of the currency helper: it sits on every car in `site/data/fleet.js` as `deposit` (Afl. 500) and `usdDeposit` ($250). Spec section 5 needs the deposit footnote, so the quiz's own `priceCfg` adds a fifth field, `depositKey`, which names one of those two car fields. In practice USD today, because `pap` is not in `SUPPORTED`.
-- The estimate the quiz **stores** is computed from the same clamped language the payload sends (`nl` or `en`), never from the raw language. The server derives `estimate_currency` from the `lang` it receives, so computing the number from a raw `pap` would store a florin figure labelled USD.
 - The estimate re-renders on the `langchange` event (`i18n.js:40`).
 - Tests live in `tools/site-tests/` at the parent repo root, deliberately OUTSIDE `site/`, so they never reach the public `gh-pages` tree.
 
@@ -41,15 +43,15 @@
 | `site/book/index.html` | Create | The quiz page: four steps, the send screen, exactly four script tags, no `.wa-float`, a `noscript` fallback anchor. |
 | `site/scripts/quiz.js` | Create | The quiz engine: pure helpers on `window.TEX_QUIZ`, plus the DOM layer that boots on `DOMContentLoaded`. |
 | `site/styles/main.css` | Modify: append a new block at the end | Quiz styles on the existing tokens, including the 44 px calendar cells and the 2 px grid gap. |
-| `site/data/config.js` | Modify: `:20-30` | Add the `requestsOn` kill switch mirroring `bookingEnabled`. |
-| `site/data/fleet.js` | Modify: `:1-17` | Add the comment noting the app side allowlist duplicate. |
 | `site/scripts/i18n.js` | Modify: `:14-20` and `:39` | Guard both `localStorage` calls with try/catch. |
 | `site/index.html` | Modify: `:62`, `:102`, `:222`, `:278-330`, `:346`, `:356`, `:386`, `:403` | Retire the inquiry form, repoint three booking anchors, fix the `rental_terms` 404, and rewrite the three claims the quiz no longer keeps. |
 | `site/scripts/main.js` | Modify: `:17-20`, `:100`, `:127-140`, `:178-204`, `:206-244`, `:255-257` | `bookUrl` returns `/book/?car=slug`; remove the code that existed only to serve the retired inquiry form. |
 | `site/sitemap.xml` | Modify: `:3-6` | Add `/book/`. |
 | `docs/QUIZ-COPY-FOR-APPROVAL.md` | Create | Every customer facing string this work invents that the spec did not already write out, English and Dutch side by side, for Tex to approve in one pass. |
 
-Every `site/index.html` line number in that row is read off the file as it stands today (426 lines). Task 13 retires the inquiry form and shortens the file by 41 lines, so `:346`, `:356`, `:386` and `:403` move up by 41 from that commit onward. Each task that touches one of them cites both the number and a literal string to search for, because the search string cannot go stale.
+Two files that earlier drafts of this plan modified and this one does not. **`site/data/config.js` is not modified at all.** Its `requestsOn` kill switch existed only to turn off a POST, and there is no POST; the quiz still *reads* `waNumber` from `:25` and nothing else, so the file ships byte for byte as it is today. **`site/data/fleet.js` is not modified at all either.** Its planned comment pointed at `src/lib/requests/catalog.ts`, an app side car allowlist that this scope no longer builds, so the comment would have shipped a reference to a file that does not exist. `fleet.js` is still read by the quiz for the six cards and the two price lists.
+
+Every `site/index.html` line number in that row is read off the file as it stands today (426 lines). Task 12 retires the inquiry form and shortens the file by 41 lines, so `:346`, `:356`, `:386` and `:403` move up by 41 from that commit onward. Each task that touches one of them cites both the number and a literal string to search for, because the search string cannot go stale.
 
 ---
 
@@ -69,7 +71,7 @@ Every `site/index.html` line number in that row is read off the file as it stand
   - `window.TEX_QUIZ.arubaTodayISO(): string`
   - `window.TEX_QUIZ.addDaysISO(iso: string, n: number): string`
   - `window.TEX_QUIZ.daysBetween(fromISO: string, untilISO: string): number`
-  - `window.TEX_QUIZ.MAX_SPAN_DAYS: 90`, `MAX_AHEAD_DAYS: 365`, `MAX_AHEAD_MONTHS: 12`, `NOTE_MAX: 200`, `NOTE_COUNTER_FROM: 150`, `SEND_TIMEOUT_MS: 4000`
+  - `window.TEX_QUIZ.MAX_SPAN_DAYS: 90`, `MAX_AHEAD_DAYS: 365`, `MAX_AHEAD_MONTHS: 12`, `NOTE_MAX: 200`, `NOTE_COUNTER_FROM: 150`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -173,14 +175,13 @@ test('the limits match the spec and the app settings', () => {
   assert.equal(pure.MAX_AHEAD_MONTHS, 12);
   assert.equal(pure.NOTE_MAX, 200);
   assert.equal(pure.NOTE_COUNTER_FROM, 150);
-  assert.equal(pure.SEND_TIMEOUT_MS, 4000);
 });
 ```
 
 - [ ] **Step 2: Run it and see it fail**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
 Expected failure: `Error: ENOENT: no such file or directory, open '.../site/scripts/quiz.js'`.
@@ -192,7 +193,11 @@ Create `site/scripts/quiz.js` with the pure block only:
 ```js
 /* ============================================
    quiz.js, Tex Cars WhatsApp request quiz (/book/)
-   Four steps, then a send screen. Nothing here reserves a car.
+   Four steps, then a send screen. Nothing here reserves a car, and
+   nothing here saves, sends or stores anything: the whole file is a pure
+   function from four answers to one wa.me link. There is deliberately no
+   fetch, no XMLHttpRequest, no sendBeacon and no localStorage in this
+   file. If you are adding one, you are changing the design.
 
    Ported from the Little John Scooters quiz engine, with its three real
    calendar bugs fixed: Aruba time instead of device time, 44px touch
@@ -218,7 +223,6 @@ Create `site/scripts/quiz.js` with the pure block only:
   const MAX_AHEAD_MONTHS = 12;   // how far the calendar arrows go
   const NOTE_MAX = 200;
   const NOTE_COUNTER_FROM = 150;
-  const SEND_TIMEOUT_MS = 4000;  // long enough for a container cold start
 
   /* ---------- dates: all ISO strings, all UTC maths, no device timezone ---------- */
   const pad = (n) => String(n).padStart(2, '0');
@@ -245,7 +249,7 @@ Create `site/scripts/quiz.js` with the pure block only:
   const PURE = {
     isoOf, arubaTodayISO, addDaysISO, daysBetween,
     MAX_SPAN_DAYS, MAX_AHEAD_DAYS, MAX_AHEAD_MONTHS,
-    NOTE_MAX, NOTE_COUNTER_FROM, SEND_TIMEOUT_MS,
+    NOTE_MAX, NOTE_COUNTER_FROM,
   };
   window.TEX_QUIZ = PURE;
 })();
@@ -262,7 +266,7 @@ outside `site/`, so they are version controlled but never reach `gh-pages`.
 
 Run them all:
 
-    node --test tools/site-tests/
+    node --test tools/site-tests/*.test.mjs
 
 Run one file:
 
@@ -287,7 +291,7 @@ Manual checks are served from `site/`:
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
 Expected: 6 tests pass, 0 fail.
@@ -438,14 +442,14 @@ Then extend the `PURE` object:
     isoOf, arubaTodayISO, addDaysISO, daysBetween,
     carBySlug, priceCfg, money, estimateFor,
     MAX_SPAN_DAYS, MAX_AHEAD_DAYS, MAX_AHEAD_MONTHS,
-    NOTE_MAX, NOTE_COUNTER_FROM, SEND_TIMEOUT_MS,
+    NOTE_MAX, NOTE_COUNTER_FROM,
   };
 ```
 
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
 Expected: 13 tests pass, 0 fail.
@@ -557,7 +561,7 @@ Extend `PURE` with `fmtDate, monthLabel, normalisePhone`.
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
 Expected: 17 tests pass, 0 fail.
@@ -667,9 +671,10 @@ In `site/scripts/quiz.js`, insert between the formatting block and `const PURE`:
 
 ```js
   /* ---------- the prefilled WhatsApp message ----------
-     Built from state the browser already holds, so it is correct even when
-     the save never returns. This is the whole request: a failed save costs
-     the back office a row, not the customer a booking. */
+     Built from state the browser already holds. This message IS the
+     request: it is the only copy of what the customer chose, and it lives
+     in their chat with Tex from the moment they press send in WhatsApp.
+     Nothing on this page keeps a second copy. */
   const WA_WHERE = {
     en: { airport: 'bring it to the airport', hotel: 'bring it to my hotel', pickup: 'I collect it at Tex' },
     nl: { airport: 'breng hem naar het vliegveld', hotel: 'breng hem naar mijn hotel', pickup: 'ik haal hem op bij Tex' },
@@ -715,7 +720,7 @@ Extend `PURE` with `buildWaText, waHref`.
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
 Expected: 23 tests pass, 0 fail.
@@ -741,11 +746,13 @@ spec, so a copy change cannot land without the test being edited."
 **Interfaces:**
 - Consumes: `site/data/config.js`, `site/data/fleet.js`, `site/scripts/i18n.js`, `site/scripts/quiz.js`.
 - Produces: the DOM contract the Task 7 to Task 10 DOM layer binds to. Element ids and data attributes, all of them load bearing:
-  - `#qCars` (step 1 card grid target), `#qCal` (calendar target), `#qNote`, `#qNoteCount`, `#qName`, `#qPhone`, `#qWebsite` (honeypot)
+  - `#qCars` (step 1 card grid target), `#qCal` (calendar target), `#qNote`, `#qNoteCount`, `#qName`, `#qPhone`
   - `.q-step` sections in order, `.q-step.is-active` for the visible one, `[data-validate]` naming the validator
   - `[data-next]`, `[data-back]`, `[data-delivery]`, `.q-error`, `.quiz-progress i`
   - Recap value spans `#rCar`, `#rFrom`, `#rUntil`, `#rEst`, `#rWhere`, `#rNote`, `#rName`, `#rPhone`, and their rows `#rNoteRow`, `#rEstRow`
-  - `#qEstimate` (estimate sentence), `#qDeposit` (deposit footnote), `#qSendBtn`, `#qStatus`, `#qOpenWa`
+  - `#qEstimate` (estimate sentence), `#qDeposit` (deposit footnote), `#qOpenWa` (the single send anchor)
+
+There is no honeypot field, no send button and no status line on this page. A honeypot exists to protect an endpoint from bots, and there is no endpoint. A send button and a status line exist to report on a save, and there is no save. The send screen ends in one real anchor.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -778,8 +785,9 @@ test('no anchor on the quiz page opens a new tab', () => {
 
 test('the send anchor carries a real href before any JavaScript runs', () => {
   const anchor = book.match(/<a[^>]*id="qOpenWa"[^>]*>/);
-  assert.ok(anchor, 'the tap 2 anchor must be in the markup');
+  assert.ok(anchor, 'the one send anchor must be in the markup');
   assert.match(anchor[0], /href="https:\/\/wa\.me\/2975945454\?text=/);
+  assert.equal(/\shidden[\s>=]/.test(anchor[0]), false, 'one tap: the anchor is never hidden waiting on anything');
 });
 
 test('JavaScript off still leaves a working WhatsApp link', () => {
@@ -800,10 +808,13 @@ test('every step heading ships both languages', () => {
   }
 });
 
-test('the consent line is verbatim, in both languages, with the 90 days in it', () => {
-  assert.ok(book.includes('Tap send and we save your name, your WhatsApp number and the choices above so Tex can answer you. Nothing is reserved yet. We delete it after 90 days.'));
-  assert.ok(book.includes('Als je verstuurt bewaren we je naam, je WhatsApp nummer en de keuzes hierboven zodat Tex je kan antwoorden. Er is nog niets gereserveerd. Na 90 dagen verwijderen we het.'));
-  assert.ok(book.includes('https://app.tex-cars.com/policies/privacy'));
+/* The consent line has to describe what actually happens. Nothing is
+   stored, so every clause about saving, deleting and 90 days is gone. */
+test('the consent line describes the handoff and claims no storage', () => {
+  assert.ok(book.includes('This opens WhatsApp with your details ready to send. You press send yourself, and nothing is reserved until Tex confirms it.'));
+  assert.ok(book.includes('Dit opent WhatsApp met je gegevens klaar om te versturen. Je drukt zelf op verzenden, en er is niets gereserveerd tot Tex het bevestigt.'));
+  assert.equal(/we save|bewaren we|90 days|90 dagen|policies\/privacy/i.test(book), false,
+    'the page keeps nothing, so it must not claim to keep, delete or govern anything');
 });
 
 test('the delivery step carries the request, not a promise, line', () => {
@@ -830,14 +841,6 @@ test('the phone field is set up for a phone keyboard', () => {
   assert.match(phone[0], /inputmode="tel"/);
   assert.match(phone[0], /autocomplete="tel"/);
   assert.match(phone[0], /placeholder="\+297 560 1234"/);
-});
-
-test('the honeypot is present, empty and hidden from real people', () => {
-  const hp = book.match(/<input[^>]*id="qWebsite"[^>]*>/);
-  assert.ok(hp);
-  assert.match(hp[0], /name="website"/);
-  assert.match(hp[0], /tabindex="-1"/);
-  assert.match(hp[0], /autocomplete="off"/);
 });
 
 test('the send screen has all eight recap slots', () => {
@@ -999,12 +1002,6 @@ Create `site/book/index.html`:
               <small class="q-help" data-en="With the country code, so Tex can reach you." data-nl="Met landcode, zodat Tex je kan bereiken.">With the country code, so Tex can reach you.</small>
             </label>
 
-            <!-- honeypot: a real person never sees this, a bot fills it in -->
-            <div class="q-hp" aria-hidden="true">
-              <label for="qWebsite">Website</label>
-              <input type="text" id="qWebsite" name="website" value="" tabindex="-1" autocomplete="off" />
-            </div>
-
             <p class="q-error" role="alert"></p>
             <div class="q-nav">
               <button type="button" class="btn btn--ghost" data-back data-en="Back" data-nl="Terug">Back</button>
@@ -1031,20 +1028,20 @@ Create `site/book/index.html`:
             <p class="q-estimate" id="qEstimate"></p>
             <p class="q-deposit" id="qDeposit"></p>
 
-            <p class="q-consent">
-              <span data-en="Tap send and we save your name, your WhatsApp number and the choices above so Tex can answer you. Nothing is reserved yet. We delete it after 90 days."
-                    data-nl="Als je verstuurt bewaren we je naam, je WhatsApp nummer en de keuzes hierboven zodat Tex je kan antwoorden. Er is nog niets gereserveerd. Na 90 dagen verwijderen we het.">Tap send and we save your name, your WhatsApp number and the choices above so Tex can answer you. Nothing is reserved yet. We delete it after 90 days.</span>
-              <a href="https://app.tex-cars.com/policies/privacy" data-en="Privacy policy" data-nl="Privacybeleid">Privacy policy</a>
-            </p>
+            <!-- The consent line says what actually happens and nothing more.
+                 Nothing on this page is saved, sent or stored, so there is no
+                 storage claim, no retention period and no privacy policy link
+                 to hang off a collection notice that does not apply. -->
+            <p class="q-consent"
+               data-en="This opens WhatsApp with your details ready to send. You press send yourself, and nothing is reserved until Tex confirms it."
+               data-nl="Dit opent WhatsApp met je gegevens klaar om te versturen. Je drukt zelf op verzenden, en er is niets gereserveerd tot Tex het bevestigt.">This opens WhatsApp with your details ready to send. You press send yourself, and nothing is reserved until Tex confirms it.</p>
 
-            <button type="button" class="btn btn--primary btn--block btn--lg" id="qSendBtn"
-                    data-en="Send request" data-nl="Verstuur aanvraag">Send request</button>
-
-            <p class="q-status" id="qStatus" role="status" aria-live="polite"></p>
-
-            <a class="btn btn--wa btn--block btn--lg q-openwa" id="qOpenWa" hidden
+            <!-- One anchor, one tap, same tab, no target. The href here is a
+                 working fallback for JavaScript off; renderSend rewrites it
+                 from state every time this screen is drawn. -->
+            <a class="btn btn--wa btn--block btn--lg q-openwa" id="qOpenWa"
                href="https://wa.me/2975945454?text=Hi%20Tex%2C%20I%27d%20like%20to%20rent%20a%20car."
-               data-en="Open WhatsApp" data-nl="Open WhatsApp">Open WhatsApp</a>
+               data-en="Send it on WhatsApp" data-nl="Stuur het via WhatsApp">Send it on WhatsApp</a>
 
             <div class="q-nav">
               <button type="button" class="btn btn--ghost" data-back data-en="Back" data-nl="Terug">Back</button>
@@ -1067,10 +1064,10 @@ Create `site/book/index.html`:
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
-Expected: 37 tests pass, 0 fail.
+Expected: 36 tests pass, 0 fail.
 
 - [ ] **Step 5: Commit**
 
@@ -1079,7 +1076,9 @@ git -C /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clien
 git -C /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental commit -m "book: the quiz page markup, four steps and a send screen
 
 Exactly four scripts, no wa-float, no target attribute anywhere, and a
-noscript WhatsApp link so the page still works with JavaScript off."
+noscript WhatsApp link so the page still works with JavaScript off.
+The send screen ends in one real anchor: nothing here is saved, so there
+is no send button, no status line and no consent to store anything."
 ```
 
 ---
@@ -1092,7 +1091,7 @@ noscript WhatsApp link so the page still works with JavaScript off."
 
 **Interfaces:**
 - Consumes: the tokens in `site/styles/tokens.css` and the existing `.btn`, `.field`, `.container` components in `main.css`.
-- Produces: the class names the Task 5 markup and the Task 7 to 10 renderers use: `.quiz-page`, `.quiz`, `.q-noscript`, `.q-trust`, `.quiz-progress`, `.q-step`, `.q-step.is-active`, `.q-title`, `.q-sub`, `.q-card`, `.q-cars`, `.q-carcard`, `.q-carcard.is-sel`, `.q-opts`, `.q-opt`, `.q-opt.is-sel`, `.q-notice`, `.q-field`, `.q-count`, `.q-help`, `.q-hp`, `.q-error`, `.q-nav`, `.q-recap`, `.q-estimate`, `.q-deposit`, `.q-consent`, `.q-status`, `.q-openwa`, `.cal2`, `.cal2-nav-row`, `.cal2-nav`, `.cal2-months`, `.cal2-month`, `.cal2-title`, `.cal2-grid`, `.cal2-day`, `.cal2-day.mid`, `.cal2-day.edge`, `.cal2-hint`.
+- Produces: the class names the Task 5 markup and the Task 7 to 10 renderers use: `.quiz-page`, `.quiz`, `.q-noscript`, `.q-trust`, `.quiz-progress`, `.q-step`, `.q-step.is-active`, `.q-title`, `.q-sub`, `.q-card`, `.q-cars`, `.q-carcard`, `.q-carcard.is-sel`, `.q-opts`, `.q-opt`, `.q-opt.is-sel`, `.q-notice`, `.q-field`, `.q-count`, `.q-help`, `.q-error`, `.q-nav`, `.q-recap`, `.q-estimate`, `.q-deposit`, `.q-consent`, `.q-openwa`, `.cal2`, `.cal2-nav-row`, `.cal2-nav`, `.cal2-months`, `.cal2-month`, `.cal2-title`, `.cal2-grid`, `.cal2-day`, `.cal2-day.mid`, `.cal2-day.edge`, `.cal2-hint`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1118,8 +1117,8 @@ test('every quiz class the markup and the renderers use is styled', () => {
   for (const cls of [
     '.quiz-page', '.quiz', '.q-noscript', '.q-trust', '.quiz-progress', '.q-step',
     '.q-title', '.q-sub', '.q-card', '.q-cars', '.q-carcard', '.q-opts', '.q-opt',
-    '.q-notice', '.q-count', '.q-help', '.q-hp', '.q-error', '.q-nav', '.q-recap',
-    '.q-estimate', '.q-deposit', '.q-consent', '.q-status', '.q-openwa',
+    '.q-notice', '.q-count', '.q-help', '.q-error', '.q-nav', '.q-recap',
+    '.q-estimate', '.q-deposit', '.q-consent', '.q-openwa',
     '.cal2-nav', '.cal2-months', '.cal2-title', '.cal2-hint',
   ]) {
     assert.ok(css.includes(cls), `missing style for ${cls}`);
@@ -1192,7 +1191,6 @@ Append to the end of `site/styles/main.css`:
 .q-field > span { font-size: .82rem; font-weight: 700; color: var(--brand-navy); }
 .q-count, .q-help { font-size: .78rem; color: var(--ink-mute); }
 .q-count[hidden] { display: none; }
-.q-hp { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .q-error { color: var(--brand-orange); font-size: .88rem; font-weight: 700; min-height: 1.2em; margin-top: .8rem; }
 .q-nav { display: flex; justify-content: space-between; align-items: center; gap: .8rem; margin-top: 1rem; }
 
@@ -1231,19 +1229,9 @@ Append to the end of `site/styles/main.css`:
 .q-estimate { font-size: 1.05rem; font-weight: 700; color: var(--brand-navy); }
 .q-deposit { font-size: .8rem; color: var(--ink-mute); margin-top: .3rem; }
 .q-consent { font-size: .8rem; color: var(--ink-soft); margin: 1.1rem 0 .9rem; line-height: 1.5; }
-.q-consent a { color: var(--brand-blue); font-weight: 700; text-decoration: underline; }
-.q-status { font-size: .9rem; font-weight: 600; min-height: 1.2em; margin-top: .7rem; text-align: center; }
-.q-status.is-ok { color: var(--brand-blue); }
-.q-status.is-warn { color: var(--brand-orange); }
+/* The one send anchor. It is the only green button in this thumb zone,
+   which is the whole reason .wa-float is not on this page at all. */
 .q-openwa { margin-top: .8rem; }
-.q-openwa[hidden] { display: none; }
-/* #qSendBtn carries .btn, and main.css:30 sets .btn { display: inline-flex }.
-   An author rule beats the user agent's [hidden] { display: none } no matter
-   the specificity, so without this line `btn.hidden = true` in send() leaves
-   the disabled "Sending..." button on screen directly above the green Open
-   WhatsApp anchor. That is the two green buttons in one thumb zone that
-   spec section 6 exists to prevent. reset.css has no [hidden] rule. */
-#qSendBtn[hidden] { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .q-step.is-active, .q-carcard { animation: none; transition: none; }
@@ -1253,10 +1241,10 @@ Append to the end of `site/styles/main.css`:
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
-Expected: 41 tests pass, 0 fail.
+Expected: 40 tests pass, 0 fail.
 
 - [ ] **Step 5: Commit**
 
@@ -1356,9 +1344,6 @@ In `site/scripts/quiz.js`, add the micro translation table and `carCardsHTML` ju
       errDelivery: 'Tell us where you would like the car.',
       errName: 'We need a name so Tex knows who to answer.',
       errPhone: 'Add your WhatsApp number with the country code.',
-      sending: 'Sending…',
-      sent: 'Sent. Now open WhatsApp so Tex sees it.',
-      failed: 'We could not save it here, so send it on WhatsApp instead. Nothing is lost.',
       estimate: (m, n) => `Estimate: ${m} for ${n}. Tex confirms the final price on WhatsApp.`,
       deposit: (m) => `A refundable deposit of ${m} is arranged when you pick the car up. It is not part of this estimate.`,
     },
@@ -1375,9 +1360,6 @@ In `site/scripts/quiz.js`, add the micro translation table and `carCardsHTML` ju
       errDelivery: 'Vertel ons waar je de auto wil hebben.',
       errName: 'We hebben een naam nodig, zodat Tex weet wie hij antwoordt.',
       errPhone: 'Vul je WhatsApp nummer in met landcode.',
-      sending: 'Versturen…',
-      sent: 'Verstuurd. Open nu WhatsApp zodat Tex het ziet.',
-      failed: 'We konden het hier niet opslaan, stuur het daarom via WhatsApp. Er gaat niets verloren.',
       estimate: (m, n) => `Schatting: ${m} voor ${n}. Tex bevestigt de definitieve prijs via WhatsApp.`,
       deposit: (m) => `Een borg van ${m} regel je bij het ophalen. Die valt buiten deze schatting.`,
     },
@@ -1502,10 +1484,10 @@ Add a placeholder validator so `boot` does not throw before Task 9 lands. Put it
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
-Expected: 46 tests pass, 0 fail.
+Expected: 45 tests pass, 0 fail.
 
 Then check it in a browser:
 
@@ -1751,10 +1733,10 @@ Extend `render()` so the language switch redraws the calendar too:
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
-Expected: 57 tests pass, 0 fail.
+Expected: 56 tests pass, 0 fail.
 
 Then, with `python3 -m http.server 8000 --directory site` running, open `http://localhost:8000/book/`, pick a car, and check on the dates step: two months render, today in Aruba is tappable, yesterday is greyed, the left arrow is disabled, tapping a day then a later day fills the range in blue, tapping an earlier day resets and the hint reads "Start date moved to …". Switch to NL and confirm the hint and the month titles turn Dutch without losing the dates.
 
@@ -1812,7 +1794,7 @@ test('validateStep asks for both dates and a return day after the pick-up day', 
   assert.equal(pure.validateStep('dates', { ...base, endDate: base.startDate }, TODAY, 'en'), msg);
 });
 
-test('validateStep re-checks the three server rules in the browser too', () => {
+test('validateStep enforces the three date rules the spec sets', () => {
   assert.equal(pure.validateStep('dates', { ...base, startDate: '2026-09-08', endDate: '2026-09-12' }, TODAY, 'en'),
     'Tap a pick-up day and a return day on the calendar.', 'a start before today in Aruba is rejected');
   assert.equal(pure.validateStep('dates', { ...base, startDate: '2027-09-10', endDate: '2027-09-14' }, TODAY, 'en'),
@@ -1864,8 +1846,13 @@ In `site/scripts/quiz.js`, delete the placeholder `validateStep` from Task 7 and
 
 ```js
   /* ---------- validation ----------
-     The same three date rules run again on the server, because the browser
-     is not trusted. These exist so the customer is told before they send. */
+     Nothing on the other side re-checks any of this, because there is no
+     other side: the browser is the only place these rules run. They exist
+     so the customer is told before they compose a message Tex would only
+     have to correct on WhatsApp. The three date rules are the ones from
+     spec section 4: a return day after the pick-up day, at most 90 days of
+     span, and a start no earlier than today in Aruba and no more than 365
+     days ahead. */
   function validateStep(kind, s, todayISO, lang) {
     const L = t(lang);
     if (kind === 'car') return carBySlug(s.carKey) ? '' : L.errCar;
@@ -1900,7 +1887,6 @@ In `boot`, extend the `els` map and add the step 3 and step 4 bindings, right af
     els.noteCount = document.getElementById('qNoteCount');
     els.name = document.getElementById('qName');
     els.phone = document.getElementById('qPhone');
-    els.website = document.getElementById('qWebsite');
 
     document.querySelectorAll('[data-delivery]').forEach((b) =>
       b.addEventListener('click', () => {
@@ -1925,10 +1911,10 @@ In `boot`, extend the `els` map and add the step 3 and step 4 bindings, right af
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
-Expected: 65 tests pass, 0 fail.
+Expected: 64 tests pass, 0 fail.
 
 Then, with the server running, walk `http://localhost:8000/book/` to step 3: tapping Continue with nothing chosen shows "Tell us where you would like the car.", choosing one clears it, typing 150 characters in the note reveals the counter and typing stops at 200. On step 4, Continue with an empty name shows the name message, a valid name and a seven digit phone shows the phone message, and `+297 560 1234` advances.
 
@@ -1938,26 +1924,43 @@ Then, with the server running, walk `http://localhost:8000/book/` to step 3: tap
 git -C /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental add site/scripts/quiz.js tools/site-tests/quiz-pure.test.mjs
 git -C /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental commit -m "quiz: delivery, name and phone steps with real validation
 
-The three date rules the server re-checks are also checked here, so the
-customer is told before they send rather than after."
+The browser is the only place the three date rules run, so the customer
+is told before they compose the message rather than after."
 ```
 
 ---
 
-## Task 10: The send step, the two taps, and the whole G1 case table
+## Task 10: The send step, one anchor, and the G1 case table
 
 **Files:**
-- Modify: `site/scripts/quiz.js` (add the send renderers and `requestBody` to the pure block, add the send wiring to `boot`)
+- Modify: `site/scripts/quiz.js` (add the send renderers to the pure block, add the send screen wiring to `boot`)
 - Test: `tools/site-tests/quiz-pure.test.mjs`, `tools/site-tests/markup.test.mjs`
 
 **Interfaces:**
-- Consumes: `estimateFor`, `priceCfg`, `money`, `fmtDate`, `daysBetween`, `carBySlug`, `normalisePhone`, `buildWaText`, `waHref`, `t`, `WA_WHERE`, `SEND_TIMEOUT_MS`, `CFG.requestsOn`, `CFG.bookingUrl`.
+- Consumes: `estimateFor`, `priceCfg`, `money`, `fmtDate`, `daysBetween`, `carBySlug`, `normalisePhone`, `waHref`, `t`.
 - Produces:
   - `estimateSentence(state: object, lang: string): string`
   - `depositSentence(state: object, lang: string): string`
   - `recapValues(state: object, lang: string): { car, from, until, est, where, note, name, phone }`
-  - `requestBody(state: object, lang: string, website: string): object` (exactly the ten keys in spec section 7)
-  - `endpointUrl(cfg: object): string`
+
+### One tap, not two
+
+Earlier drafts of this plan had two taps: tap 1 awaited a save, tap 2 was a fresh gesture on a real anchor. The second tap existed only because the first one was `await`ing something, and a navigation started after an `await` is no longer attached to the user's gesture, which is exactly what popup blockers and in app webviews punish. With nothing to save there is nothing to await, so the send screen ends in a single real anchor and the customer taps once.
+
+The same tab rule stays, and the reason for it is unchanged. There is **no `target` attribute anywhere on this page**. In the Instagram and Facebook in app webviews, which carry a large share of Aruba rental traffic, `target="_blank"` has no tab to open into: it either spawns a nested webview that cannot follow `wa.me`'s redirect into the `whatsapp://` scheme, or it is swallowed with no visible effect at all. A same tab navigation is followed and the operating system hands off to WhatsApp.
+
+### The G1 case table, all of it
+
+G1 says WhatsApp opens in every case. With no network call there are only two cases left.
+
+| What happens | What the customer sees | Does WhatsApp open |
+| - | - | - |
+| JavaScript working | The recap, the estimate sentence, the deposit footnote, the consent line, and one green anchor whose `href` was rebuilt from state when this screen rendered | Yes |
+| JavaScript disabled or broken | The `noscript` block from Task 5, and the send anchor's own markup `href`, which is a real `wa.me` link written by hand | Yes |
+
+There is no third case. There is no failure line, because there is no operation that can fail: the anchor is a link, and a link either navigates or the page was never loaded at all. This is also why the send screen no longer carries a status line.
+
+Because the customer leaves the page on that tap and may never come back, everything they might need is rendered **before** the navigation. There is no "thanks, we got it" screen waiting for a return that will not happen.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1999,74 +2002,12 @@ test('recapValues fills all eight rows', () => {
   assert.equal(r.where, 'Bring it to my hotel');
   assert.equal(r.note, 'Divi Village, arriving 11:00');
   assert.equal(r.name, 'Monischa');
-  assert.equal(r.phone, '+2975601234', 'the recap shows the number as it will be stored');
+  assert.equal(r.phone, '+2975601234', 'the recap shows the normalised number, so the customer can check it before sending');
 });
 
 test('recapValues translates the delivery row', () => {
   assert.equal(pure.recapValues(SEND, 'nl').where, 'Breng hem naar mijn hotel');
   assert.equal(pure.recapValues({ ...SEND, delivery: 'pickup' }, 'nl').where, 'Ik haal hem op bij Tex');
-});
-
-/* Exactly the ten keys in spec section 7. The schema is strict, so an
-   extra key is a 422. */
-test('requestBody sends exactly the ten keys the endpoint accepts', () => {
-  const body = pure.requestBody(SEND, 'en', '');
-  assert.deepEqual(Object.keys(body).sort(), [
-    'carKey', 'deliveryNote', 'delivery', 'endDate', 'estimateCents',
-    'lang', 'name', 'phone', 'startDate', 'website',
-  ].sort());
-});
-
-test('requestBody normalises the phone and sends the estimate in cents', () => {
-  const body = pure.requestBody(SEND, 'en', '');
-  assert.equal(body.carKey, 'hyundai-i10');
-  assert.equal(body.startDate, '2026-03-14');
-  assert.equal(body.endDate, '2026-03-20');
-  assert.equal(body.delivery, 'hotel');
-  assert.equal(body.deliveryNote, 'Divi Village, arriving 11:00');
-  assert.equal(body.name, 'Monischa');
-  assert.equal(body.phone, '+2975601234');
-  assert.equal(body.lang, 'en');
-  assert.equal(body.estimateCents, 21000);
-  assert.equal(body.website, '');
-});
-
-test('requestBody never sends a car name or a class, which the server derives', () => {
-  const json = JSON.stringify(pure.requestBody(SEND, 'en', ''));
-  assert.equal(json.includes('Hyundai i10'), false);
-  assert.equal(json.includes('Economy'), false);
-});
-
-test('requestBody passes a filled honeypot straight through', () => {
-  assert.equal(pure.requestBody(SEND, 'en', 'http://spam.example').website, 'http://spam.example');
-});
-
-test('requestBody leaves estimateCents out of the JSON when there is no estimate', () => {
-  const body = pure.requestBody({ ...SEND, endDate: '' }, 'en', '');
-  assert.equal(body.estimateCents, undefined);
-  assert.equal(JSON.stringify(body).includes('estimateCents'), false);
-});
-
-test('requestBody clamps lang to the two supported languages', () => {
-  assert.equal(pure.requestBody(SEND, 'nl', '').lang, 'nl');
-  assert.equal(pure.requestBody(SEND, 'pap', '').lang, 'en');
-});
-
-/* The server derives estimate_currency from the lang it is sent. If the
-   figure were computed from the raw language and the lang were clamped
-   afterwards, a Papiamento visitor would store 300 florin labelled USD. */
-test('requestBody computes the estimate from the lang it actually sends', () => {
-  const body = pure.requestBody(SEND, 'pap', '');
-  assert.equal(body.lang, 'en');
-  assert.equal(body.estimateCents, 21000, 'the stored figure is the dollar one, matching the stored currency');
-  assert.notEqual(body.estimateCents, 30000, 'the florin figure must never be stored as USD');
-  assert.equal(pure.requestBody(SEND, 'nl', '').estimateCents, 21000);
-});
-
-test('endpointUrl is the one path from C2, on the app origin', () => {
-  assert.equal(pure.endpointUrl({ bookingUrl: 'https://app.tex-cars.com' }), 'https://app.tex-cars.com/api/booking-requests');
-  assert.equal(pure.endpointUrl({ bookingUrl: 'https://app.tex-cars.com/' }), 'https://app.tex-cars.com/api/booking-requests');
-  assert.equal(pure.endpointUrl({}), 'https://app.tex-cars.com/api/booking-requests');
 });
 ```
 
@@ -2075,36 +2016,31 @@ Append to `tools/site-tests/markup.test.mjs`:
 ```js
 const quiz = read('scripts/quiz.js');
 
-test('the WhatsApp anchor href is written before the fetch is fired', () => {
-  const send = quiz.slice(quiz.indexOf('async function send('));
-  assert.ok(send.indexOf('openWa.href') > -1, 'the send flow must set the anchor href');
-  assert.ok(send.indexOf('openWa.href') < send.indexOf('fetch('),
-    'the href must be written from state the browser already holds, before the POST');
+/* The whole design in one assertion. The quiz is a message composer: the
+   only thing that ever leaves this page is the customer's own tap on a
+   wa.me link. One well meant fetch would quietly undo that. */
+test('the quiz sends nothing anywhere and keeps nothing', () => {
+  for (const forbidden of ['fetch(', 'XMLHttpRequest', 'sendBeacon', 'localStorage', 'document.cookie']) {
+    assert.equal(quiz.includes(forbidden), false, `${forbidden} has no place in a page that stores nothing`);
+  }
 });
 
-test('the abort is 4000 ms, not 2500 and not 6000', () => {
-  assert.match(quiz, /SEND_TIMEOUT_MS\s*=\s*4000/);
-  assert.match(quiz, /AbortController/);
-});
-
-test('the send flow reveals the anchor in a finally, so no path can skip it', () => {
-  assert.match(quiz, /finally\s*\{[^}]*openWa\.hidden\s*=\s*false/s);
+test('the send screen rebuilds the anchor href from state every render', () => {
+  const render = quiz.slice(quiz.indexOf('function renderSend('));
+  assert.match(render, /openWa\.href\s*=\s*waHref\(state, l\)/,
+    'the anchor must carry the current answers, not the markup fallback');
 });
 
 test('quiz.js opens no new tab and no window', () => {
   assert.equal(quiz.includes('window.open'), false);
   assert.equal(/target\s*=\s*['"]_blank['"]/.test(quiz), false);
 });
-
-test('the kill switch skips the POST entirely', () => {
-  assert.match(quiz, /CFG\.requestsOn/);
-});
 ```
 
 - [ ] **Step 2: Run it and see it fail**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
 Expected failure: `TypeError: pure.estimateSentence is not a function`.
@@ -2151,50 +2087,15 @@ In `site/scripts/quiz.js`, add above `const PURE`:
       phone: normalisePhone(s.phone),
     };
   }
-
-  /* Exactly the ten keys in the contract. The schema on the other side is
-     strict, so an extra key is a 422. vehicleName and vehicleClass are
-     deliberately absent: the server derives both from carKey. */
-  function requestBody(s, lang, website) {
-    /* Clamp first, then price. The server derives estimate_currency from the
-       lang in this payload, so the figure has to come from the same language
-       the payload carries. Pricing on the raw language and clamping after
-       would store a florin number labelled USD for a Papiamento visitor.
-       priceCfg keeps its pap branch for the page itself; only the stored
-       number is pinned to the language actually sent. */
-    const sendLang = lang === 'nl' ? 'nl' : 'en';
-    const car = carBySlug(s.carKey);
-    const days = daysBetween(s.startDate, s.endDate);
-    const est = estimateFor(car, days, sendLang);
-    return {
-      carKey: s.carKey,
-      startDate: s.startDate,
-      endDate: s.endDate,
-      delivery: s.delivery,
-      deliveryNote: s.deliveryNote || '',
-      name: String(s.name || '').trim(),
-      phone: normalisePhone(s.phone),
-      lang: sendLang,
-      // undefined rather than null: JSON.stringify drops the key entirely, and
-      // the schema on the other side takes an optional integer, never a null
-      estimateCents: est === null ? undefined : est * 100,
-      website: website || '',
-    };
-  }
-
-  const endpointUrl = (cfg) =>
-    `${(cfg.bookingUrl || 'https://app.tex-cars.com').replace(/\/$/, '')}/api/booking-requests`;
 ```
 
-Extend `PURE` with `estimateSentence, depositSentence, recapValues, requestBody, endpointUrl`.
+Extend `PURE` with `estimateSentence, depositSentence, recapValues`.
 
-In the DOM layer, add the send renderer and the two tap flow. Add to `els` in `boot`:
+In the DOM layer, add the send renderer. Add to `els` in `boot`:
 
 ```js
     els.estimate = document.getElementById('qEstimate');
     els.deposit = document.getElementById('qDeposit');
-    els.sendBtn = document.getElementById('qSendBtn');
-    els.status = document.getElementById('qStatus');
     els.openWa = document.getElementById('qOpenWa');
     els.recap = {
       rCar: document.getElementById('rCar'), rFrom: document.getElementById('rFrom'),
@@ -2225,8 +2126,11 @@ Add `renderSend`, and call it from `render()`:
     if (els.noteRow) els.noteRow.hidden = !v.note;
     if (els.estimate) els.estimate.textContent = estimateSentence(state, l);
     if (els.deposit) els.deposit.textContent = depositSentence(state, l);
-    // The anchor is correct the moment the send screen renders, well before
-    // anybody taps anything.
+    /* The single send anchor. Its markup href is a plain wa.me link that
+       works with JavaScript off; here it is replaced by the full request,
+       every time this screen is drawn and every time the language changes.
+       There is nothing to await, so there is never a window in which the
+       anchor is stale: by the time the customer can see it, it is right. */
     if (els.openWa) els.openWa.href = waHref(state, l);
   }
 
@@ -2237,68 +2141,9 @@ Add `renderSend`, and call it from `render()`:
   }
 ```
 
-One decision worth stating out loud before the code, so a later reader does not file it as a bug: with `requestsOn: false` the kill switch sets `ok = true`, so the customer reads "Sent. Now open WhatsApp so Tex sees it." while nothing was saved. That line stays exactly as it is, because the WhatsApp message carries the whole request and from the customer's side it genuinely was sent. Only the back office row is skipped, and a code comment in `send()` says so.
+There is no `send()` function, no button handler and no status line. The anchor is the whole send step. Nothing is disabled, nothing spins, nothing can time out, and the customer's tap is a plain navigation the browser has always been allowed to make.
 
-Add the two tap flow, just above `boot`:
-
-```js
-  /* Tap 1 saves. Tap 2 is a real anchor with no target, in the same tab,
-     because _blank has no tab to open into inside the Instagram and
-     Facebook webviews. WhatsApp opens in every case: the anchor is
-     revealed in a finally, so no branch can skip it. */
-  async function send() {
-    const l = lang();
-    const btn = els.sendBtn, openWa = els.openWa, status = els.status;
-
-    openWa.href = waHref(state, l);   // written BEFORE the fetch, from state we hold
-
-    btn.disabled = true;
-    btn.textContent = t(l).sending;
-    status.textContent = '';
-    status.className = 'q-status';
-
-    let ok = false;
-    try {
-      if (CFG.requestsOn === false) {
-        // Kill switch: no POST at all, straight to WhatsApp. ok stays true on
-        // purpose, so the customer still reads "Sent. Now open WhatsApp so Tex
-        // sees it." even though nothing was saved. That is not a bug: the
-        // WhatsApp message carries the whole request, so from the customer's
-        // side it really was sent. Only the back office row is skipped.
-        ok = true;
-      } else {
-        const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), SEND_TIMEOUT_MS);
-        try {
-          const res = await fetch(endpointUrl(CFG), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody(state, l, els.website ? els.website.value : '')),
-            signal: ctrl.signal,
-          });
-          ok = res.ok;
-        } finally {
-          clearTimeout(timer);
-        }
-      }
-    } catch (err) {
-      ok = false;   // offline, aborted at 4000 ms, DNS, CORS: all the same to the customer
-    } finally {
-      status.textContent = ok ? t(l).sent : t(l).failed;
-      status.className = 'q-status ' + (ok ? 'is-ok' : 'is-warn');
-      openWa.hidden = false;
-      btn.hidden = true;
-    }
-  }
-```
-
-Wire it in `boot`, after the step 4 bindings:
-
-```js
-    if (els.sendBtn) els.sendBtn.addEventListener('click', send);
-```
-
-And make the last `data-next` land on the send screen with a fresh recap: extend the `[data-next]` handler so it renders the send screen before showing it.
+Make the last `data-next` land on the send screen with a fresh recap: extend the `[data-next]` handler so it renders the send screen before showing it.
 
 ```js
     document.querySelectorAll('[data-next]').forEach((b) =>
@@ -2313,117 +2158,27 @@ And make the last `data-next` land on the send screen with a fresh recap: extend
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
-Expected: 83 tests pass, 0 fail.
+Expected: 72 tests pass, 0 fail.
 
-Then walk the whole quiz at `http://localhost:8000/book/` and confirm the send screen shows all eight recap rows, the estimate sentence, the deposit footnote, the consent line with a working Privacy policy link, and that tapping Send request turns the button into "Sending…", then after at most four seconds shows a status line and reveals a green "Open WhatsApp" button. Because the app endpoint is not running locally, the expected local result is the failure line, "We could not save it here, so send it on WhatsApp instead. Nothing is lost.", and the anchor still opens WhatsApp with the full message. That is the G1 path, proven.
+Then walk the whole quiz at `http://localhost:8000/book/` and confirm the send screen shows all eight recap rows, the estimate sentence, the deposit footnote and the consent line, and that the green anchor is visible straight away with no button to press first. Right click it and copy the link: it must be `https://wa.me/2975945454?text=` followed by the whole encoded seven line message, with the car and the dates you just picked in it. Switch to NL on the send screen and copy the link again: the message must now be Dutch. Open the Network tab, walk the quiz once more and confirm it stays empty apart from the page's own four scripts, the stylesheets, the fonts and the car images. That is G1 and the no-storage rule, both proven in one pass.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git -C /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental add site/scripts/quiz.js tools/site-tests
-git -C /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental commit -m "quiz: the send step, two taps, 4000ms abort, kill switch
+git -C /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental commit -m "quiz: the send step, one anchor, no network at all
 
-The WhatsApp href is written before the fetch and the anchor is revealed
-in a finally, so every row of the G1 case table ends in WhatsApp opening."
+The recap, the estimate and the consent line render, then a single real
+anchor carries the whole request into WhatsApp in the same tab. Nothing
+is saved, so there is nothing to await and nothing that can fail."
 ```
 
 ---
 
-## Task 11: The requestsOn kill switch and the fleet.js drift comment
-
-**Files:**
-- Modify: `site/data/config.js:20-30`
-- Modify: `site/data/fleet.js:1-17`
-- Test: `tools/site-tests/markup.test.mjs`
-
-**Interfaces:**
-- Consumes: nothing.
-- Produces: `window.TEX_CONFIG.requestsOn: boolean`, read by `send()` from Task 10.
-
-- [ ] **Step 1: Write the failing test**
-
-Append to `tools/site-tests/markup.test.mjs`:
-
-```js
-import { loadSite } from './harness.mjs';
-
-test('the kill switch exists and ships on', () => {
-  const cfg = loadSite().window.TEX_CONFIG;
-  assert.equal(cfg.requestsOn, true);
-  assert.equal(typeof cfg.requestsOn, 'boolean');
-});
-
-test('the kill switch is documented next to bookingEnabled', () => {
-  const config = read('data/config.js');
-  assert.ok(config.indexOf('requestsOn') > config.indexOf('bookingEnabled'), 'it mirrors bookingEnabled');
-  assert.match(config, /requestsOn[\s\S]{0,400}?WhatsApp/, 'the comment must say what false does');
-});
-
-test('fleet.js warns that the app duplicates these six keys', () => {
-  const fleet = read('data/fleet.js');
-  assert.match(fleet, /src\/lib\/requests\/catalog\.ts/, 'name the file that duplicates this one');
-  assert.ok(fleet.indexOf('src/lib/requests/catalog.ts') < fleet.indexOf('window.TEX_FLEET'), 'the note goes at the top');
-});
-```
-
-- [ ] **Step 2: Run it and see it fail**
-
-```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/markup.test.mjs
-```
-
-Expected failure: `AssertionError [ERR_ASSERTION]: Expected values to be strictly equal: undefined !== true`.
-
-- [ ] **Step 3: Implement**
-
-In `site/data/config.js`, add the flag directly under `bookingEnabled` at `:21`:
-
-```js
-window.TEX_CONFIG = {
-  bookingEnabled: true,
-  // The /book/ quiz saves each request to the app before it opens WhatsApp.
-  // Set this to false and the quiz skips the POST entirely and goes straight
-  // to the WhatsApp anchor: the customer still reaches Tex with the whole
-  // request typed out, the back office just does not get a row. This is the
-  // one minute rollback and it needs no app deploy.
-  requestsOn: true,
-```
-
-In `site/data/fleet.js`, add to the top comment block, just above the closing `============================================ */` at `:17`:
-
-```
-   The six slug values below are also the car_key allowlist in the app, at
-   src/lib/requests/catalog.ts, which maps each key to a display name and a
-   class. The two lists are duplicates and will drift if these cards change.
-   A unit test in the app asserts they match; nothing prevents the drift.
-   These slugs are NOT app vehicle slugs: the app tracks individual cars by
-   plate (hyundai-i10-v-7123), the site shows one car per model.
-```
-
-- [ ] **Step 4: Run it and see it pass**
-
-```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
-```
-
-Expected: 86 tests pass, 0 fail.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git -C /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental add site/data/config.js site/data/fleet.js tools/site-tests/markup.test.mjs
-git -C /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental commit -m "config: requestsOn kill switch, and note the app side car allowlist
-
-Flipping requestsOn to false skips the POST and still opens WhatsApp, so
-the rollback needs no app deploy."
-```
-
----
-
-## Task 12: Guard localStorage in i18n.js
+## Task 11: Guard localStorage in i18n.js
 
 **Files:**
 - Modify: `site/scripts/i18n.js:14-20` and `:39`
@@ -2524,10 +2279,10 @@ And replace `:39`:
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
-Expected: 90 tests pass, 0 fail.
+Expected: 76 tests pass, 0 fail.
 
 - [ ] **Step 5: Commit**
 
@@ -2541,7 +2296,7 @@ never defined and langchange never fired. This fixes the homepage too."
 
 ---
 
-## Task 13: Retire the homepage inquiry form
+## Task 12: Retire the homepage inquiry form
 
 **Files:**
 - Modify: `site/index.html:278-330` (the aside copy and the whole `<form id="inquiry-form">`)
@@ -2555,7 +2310,7 @@ never defined and langchange never fired. This fixes the homepage too."
 
 Nobody can send an unstructured inquiry from the homepage after this. That is D6, and it is a deliberate loss.
 
-This task runs **before** the `bookUrl` change in Task 14, and the order is load bearing. `bookUrl` has two call sites today: the fleet card at `site/scripts/main.js:100` and the inquiry form's submit handler at `site/scripts/main.js:221`. Task 14 changes the signature from `(params = {})` to `(slug)`. If that landed first, the surviving call at `:221` would pass an object where a string is expected and submitting the homepage form would navigate to `/book/?car=%5Bobject%20Object%5D` for one whole commit. Retiring the form first deletes that call site, so every commit leaves the site working.
+This task runs **before** the `bookUrl` change in Task 13, and the order is load bearing. `bookUrl` has two call sites today: the fleet card at `site/scripts/main.js:100` and the inquiry form's submit handler at `site/scripts/main.js:221`. Task 13 changes the signature from `(params = {})` to `(slug)`. If that landed first, the surviving call at `:221` would pass an object where a string is expected and submitting the homepage form would navigate to `/book/?car=%5Bobject%20Object%5D` for one whole commit. Retiring the form first deletes that call site, so every commit leaves the site working.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -2650,17 +2405,17 @@ In `site/scripts/main.js`, delete four blocks and nothing else:
 
 Leave the `T` micro translation table alone. Some of its keys are now unused, but it is data that `renderFleet` still reads from, and editing it is not in scope.
 
-After this edit `site/index.html` is 41 lines shorter: 2 lines become 1 in the aside, and 44 lines become 4 where the form stood. Everything below the old `:330` moves up by 41. Tasks 14, 15 and 16 all say so where it matters.
+After this edit `site/index.html` is 41 lines shorter: 2 lines become 1 in the aside, and 44 lines become 4 where the form stood. Everything below the old `:330` moves up by 41. Tasks 13, 14 and 15 all say so where it matters.
 
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
-Expected: 95 tests pass, 0 fail.
+Expected: 81 tests pass, 0 fail.
 
-Then reload `http://localhost:8000/`, open the browser console, and confirm: the Contact section shows the call to action card instead of the form, there are no console errors on load, the language toggle still re-renders the fleet cards and the rates table, the six fleet card buttons still work (they still point at the app wizard at this commit, which Task 14 changes), and the FAQ accordion still opens.
+Then reload `http://localhost:8000/`, open the browser console, and confirm: the Contact section shows the call to action card instead of the form, there are no console errors on load, the language toggle still re-renders the fleet cards and the rates table, the six fleet card buttons still work (they still point at the app wizard at this commit, which Task 13 changes), and the FAQ accordion still opens.
 
 - [ ] **Step 5: Commit**
 
@@ -2670,15 +2425,15 @@ git -C /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clien
 
 D6. The form's JavaScript goes with it: the class options, the date range
 picker and the submit handler existed only to serve it. The handler held
-the second bookUrl call site, which is why this lands before Task 14."
+the second bookUrl call site, which is why this lands before Task 13."
 ```
 
 ---
 
-## Task 14: Repoint all four booking surfaces
+## Task 13: Repoint all four booking surfaces
 
 **Files:**
-- Modify: `site/index.html:62`, `site/index.html:102`, and the footer anchor (`:403` on the file as it stands today, `:362` after Task 13 shortens it by 41 lines; find it by its `data-booking-href="/book"` attribute inside `<footer>`, it is the only one left)
+- Modify: `site/index.html:62`, `site/index.html:102`, and the footer anchor (`:403` on the file as it stands today, `:362` after Task 12 shortens it by 41 lines; find it by its `data-booking-href="/book"` attribute inside `<footer>`, it is the only one left)
 - Modify: `site/scripts/main.js:17-20` and `site/scripts/main.js:100`
 - Test: `tools/site-tests/markup.test.mjs`
 
@@ -2688,11 +2443,11 @@ the second bookUrl call site, which is why this lands before Task 14."
 
 There are four entry points, not three. The fourth is generated in JavaScript and no edit to `index.html` reaches it.
 
-The signature change is safe here and only here: Task 13 already deleted the inquiry form's submit handler, which held the only other `bookUrl` call site. After Task 13 the sole caller is the fleet card at `:100`, and this task changes the two together in one commit.
+The signature change is safe here and only here: Task 12 already deleted the inquiry form's submit handler, which held the only other `bookUrl` call site. After Task 12 the sole caller is the fleet card at `:100`, and this task changes the two together in one commit.
 
 - [ ] **Step 1: Write the failing test**
 
-Append to `tools/site-tests/markup.test.mjs`. `index` and `mainJs` are already declared in the Task 13 block above.
+Append to `tools/site-tests/markup.test.mjs`. `index` and `mainJs` are already declared in the Task 12 block above.
 
 ```js
 test('no booking anchor is left pointing at the app wizard', () => {
@@ -2747,7 +2502,7 @@ Expected failure: `AssertionError [ERR_ASSERTION]: the bridge rewrite loop must 
                  data-book-en="Request a car" data-book-nl="Vraag een auto aan" data-book-es="Reservar online" data-book-pap="Reservá online">Request a car</a>
 ```
 
-The footer anchor, `:362` after Task 13 (it was `:403` before), becomes:
+The footer anchor, `:362` after Task 12 (it was `:403` before), becomes:
 
 ```html
           <a class="btn btn--wa" href="/book/"
@@ -2785,10 +2540,10 @@ And the fleet card anchor at `:100`:
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
-Expected: 98 tests pass, 0 fail.
+Expected: 84 tests pass, 0 fail.
 
 Then open `http://localhost:8000/` and check the nav, hero and footer buttons all read "Request a car", all go to `/book/` in the same tab, and each of the six fleet cards goes to `/book/?car=<its slug>` with that car already selected.
 
@@ -2804,10 +2559,10 @@ JavaScript and no index.html edit would have reached."
 
 ---
 
-## Task 15: The rental_terms 404 and the sitemap entry
+## Task 14: The rental_terms 404 and the sitemap entry
 
 **Files:**
-- Modify: the footer policy list item in `site/index.html` (`:386` on the file as it stands today, `:345` after Task 13 shortens it by 41 lines; find it by the literal string `/policies/rental-terms`, which appears exactly once)
+- Modify: the footer policy list item in `site/index.html` (`:386` on the file as it stands today, `:345` after Task 12 shortens it by 41 lines; find it by the literal string `/policies/rental-terms`, which appears exactly once)
 - Modify: `site/sitemap.xml:3-6`
 - Test: `tools/site-tests/markup.test.mjs`
 
@@ -2850,7 +2605,7 @@ Expected failure: `AssertionError [ERR_ASSERTION]: the enum has an underscore, n
 
 - [ ] **Step 3: Implement**
 
-In `site/index.html`, on the line that holds `/policies/rental-terms` (`:345` after Task 13), change the one character:
+In `site/index.html`, on the line that holds `/policies/rental-terms` (`:345` after Task 12), change the one character:
 
 ```html
             <li data-booking-only hidden><a href="#" data-booking-href="/policies/rental_terms" data-en="Rental terms" data-nl="Huurvoorwaarden" data-es="Términos de alquiler" data-pap="Kondishonnan di hür">Rental terms</a></li>
@@ -2865,10 +2620,10 @@ In `site/index.html`, on the line that holds `/policies/rental-terms` (`:345` af
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
-Expected: 101 tests pass, 0 fail.
+Expected: 87 tests pass, 0 fail.
 
 Also confirm the sitemap still parses:
 
@@ -2890,12 +2645,12 @@ has shipped with a hyphen since booking was enabled."
 
 ---
 
-## Task 16: The three homepage claims the quiz does not keep
+## Task 15: The three homepage claims the quiz does not keep
 
 **Files:**
 - Modify: `site/index.html:222` (the `data-book-*` copy on the "Message us" step)
-- Modify: the `data-book-*` copy on the "What do I need to rent?" FAQ answer (`:346` on the file as it stands today, `:305` after Task 13 shortens it by 41 lines; find it by the literal string `we ask for your license details upfront`)
-- Modify: the `data-booking-only` online payment FAQ item (`:356-359` today, `:315-318` after Task 13; find it by the literal string `How does paying online work?`)
+- Modify: the `data-book-*` copy on the "What do I need to rent?" FAQ answer (`:346` on the file as it stands today, `:305` after Task 12 shortens it by 41 lines; find it by the literal string `we ask for your license details upfront`)
+- Modify: the `data-booking-only` online payment FAQ item (`:356-359` today, `:315-318` after Task 12; find it by the literal string `How does paying online work?`)
 - Test: `tools/site-tests/markup.test.mjs`
 
 **Interfaces:**
@@ -2915,7 +2670,7 @@ This task is not in the spec. It comes from the owner's decision on 2026-09-09, 
 - `:220`, the "How it works" step heading `data-book-en="Book online"`.
 - Every other use of the word "online" anywhere on the site, including the `data-book-es` and `data-book-pap` variants on the three call to action anchors, which Appendix A item 2 already records as stale.
 
-**This copy needs Tex's approval before launch.** It is new wording, not copied from the spec, and it is listed for that approval in `docs/QUIZ-COPY-FOR-APPROVAL.md` (Task 18). Four languages are written because the file's convention is four (`data-en`, `data-nl`, `data-es`, `data-pap`), even though `i18n.js:12` renders only two today.
+**This copy needs Tex's approval before launch.** It is new wording, not copied from the spec, and it is listed for that approval in `docs/QUIZ-COPY-FOR-APPROVAL.md` (Task 17). Four languages are written because the file's convention is four (`data-en`, `data-nl`, `data-es`, `data-pap`), even though `i18n.js:12` renders only two today.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -2955,13 +2710,13 @@ Expected failure: `AssertionError [ERR_ASSERTION]: the quiz takes no money at al
                data-book-en="Pick your car and your days online, and Tex answers you on WhatsApp. Done in minutes." data-book-nl="Kies online je auto en je dagen, en Tex antwoordt je op WhatsApp. In een paar minuten geregeld." data-book-es="Elige tu auto y tus días online, y Tex te responde por WhatsApp. Listo en minutos." data-book-pap="Skohe bo outo i bo dianan online, i Tex ta kontestá bo via WhatsApp. Kla den un par di minüt.">Send us your dates and the car you want on WhatsApp. We reply fast.</p>
 ```
 
-**Two.** The second line of the "What do I need to rent?" FAQ answer (`:346` today, `:305` after Task 13). The line above it, with the `data-en` through `data-pap` values, is not touched. Replace it with:
+**Two.** The second line of the "What do I need to rent?" FAQ answer (`:346` today, `:305` after Task 12). The line above it, with the `data-en` through `data-pap` values, is not touched. Replace it with:
 
 ```html
                data-book-en="A valid driver's license and a form of ID. Drivers need to be 21 or older. You show the license when you pick the car up, so there is nothing to fill in beforehand." data-book-nl="Een geldig rijbewijs en een identiteitsbewijs. Je bent minimaal 21 jaar. Je laat je rijbewijs zien bij het ophalen, dus vooraf hoef je niets in te vullen." data-book-es="Una licencia de conducir válida y una identificación. Los conductores deben tener 21 años o más. Muestras la licencia al recoger el auto, así que no hay nada que rellenar antes." data-book-pap="Un karnet di chofer válido i un identifikashon. Chofer mester tin 21 aña òf mas. Bo ta mustra bo karnet ora bo buska e outo, pues no tin nada pa yena promé.">A valid driver's license and a form of ID. Drivers need to be 21 or older, and the $250 deposit comes back to you when you return the car.</p></div>
 ```
 
-**Three.** The online payment FAQ item (`:356-359` today, `:315-318` after Task 13). The `data-booking-only hidden` attributes stay exactly as they are, so the item keeps appearing while `bookingEnabled` is true. Only the question and the answer change:
+**Three.** The online payment FAQ item (`:356-359` today, `:315-318` after Task 12). The `data-booking-only hidden` attributes stay exactly as they are, so the item keeps appearing while `bookingEnabled` is true. Only the question and the answer change:
 
 ```html
           <div class="faq__item" data-reveal data-booking-only hidden>
@@ -2973,10 +2728,10 @@ Expected failure: `AssertionError [ERR_ASSERTION]: the quiz takes no money at al
 - [ ] **Step 4: Run it and see it pass**
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
 ```
 
-Expected: 103 tests pass, 0 fail.
+Expected: 89 tests pass, 0 fail. This is the full suite: nothing after this task adds a test.
 
 Then reload `http://localhost:8000/`, open the FAQ, and confirm the payment question reads "How do I pay?" with the pay at pickup answer, the "What do I need to rent?" answer no longer mentions licence details upfront, and the "How it works" step no longer mentions a reservation fee. Switch to NL and read all three again.
 
@@ -2992,94 +2747,39 @@ Copy is pending Tex's approval, see docs/QUIZ-COPY-FOR-APPROVAL.md."
 ```
 
 ---
-## Task 17: Prove every row of the G1 case table against a stub endpoint
+## Task 16: Walk the G1 case table and the device matrix on real devices
 
 **Files:**
-- Create: `tools/site-tests/stub-endpoint.mjs`
-- Test: manual, driven by the stub. This is the row of the G1 table the unit tests cannot reach, because it is about what the browser does with a real network.
+- Nothing created and nothing modified. This task is manual verification only.
+- Test: manual. These are the things the Node tests cannot reach, because they are about what a real browser on a real phone does with the shipped page.
 
 **Interfaces:**
-- Consumes: `endpointUrl(CFG)` from Task 10, `CFG.bookingUrl` from `site/data/config.js`.
-- Produces: nothing shipped. A local stub that answers `POST /api/booking-requests` with whatever status you ask for.
+- Consumes: everything Tasks 5 to 15 shipped.
+- Produces: nothing. No stub server, no temporary config edit, no throwaway file. With no endpoint to stand in for, there is nothing to stub and nothing to point at a different origin, so this task cannot leave a temporary edit behind in `site/data/config.js` the way an earlier draft could.
 
-- [ ] **Step 1: Write the stub**
-
-Create `tools/site-tests/stub-endpoint.mjs`:
-
-```js
-/* A stand-in for POST /api/booking-requests, so the G1 case table can be
-   walked in a real browser without the app running.
-
-     node tools/site-tests/stub-endpoint.mjs 201
-     node tools/site-tests/stub-endpoint.mjs 422
-     node tools/site-tests/stub-endpoint.mjs 500
-     node tools/site-tests/stub-endpoint.mjs hang     (never answers)
-
-   Then set bookingUrl to http://localhost:8787 in site/data/config.js for
-   the manual pass, and put it back before committing. */
-import { createServer } from 'node:http';
-
-const mode = process.argv[2] || '201';
-const PORT = 8787;
-
-createServer((req, res) => {
-  const cors = {
-    'Access-Control-Allow-Origin': req.headers.origin || '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  };
-  if (req.method === 'OPTIONS') { res.writeHead(204, cors); res.end(); return; }
-
-  let body = '';
-  req.on('data', (c) => { body += c; });
-  req.on('end', () => {
-    console.log(`${new Date().toISOString()} ${req.method} ${req.url}`);
-    console.log(body);
-    if (mode === 'hang') return;   // the customer's 4000 ms abort has to win
-    const code = Number(mode);
-    res.writeHead(code, { ...cors, 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(code === 201 ? { ok: true } : { error: { message: 'stub' } }));
-  });
-}).listen(PORT, () => console.log(`stub endpoint on http://localhost:${PORT} answering ${mode}`));
-```
-
-- [ ] **Step 2: Set up the two servers**
+- [ ] **Step 1: Serve the site**
 
 ```bash
 cd /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental && python3 -m http.server 8000 --directory site
 ```
 
-In a second shell:
+- [ ] **Step 2: Walk both rows of the G1 case table**
 
-```bash
-node /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/stub-endpoint.mjs 201
-```
+Complete the quiz once (Hyundai i10, two future days, "Bring it to my hotel", note "Divi Village, arriving 11:00", name Monischa, phone `+297 560 1234`).
 
-Temporarily change the `bookingUrl` key in `site/data/config.js` to `bookingUrl: "http://localhost:8787",`. Find it by name, not by line number: it is at `:24` on the file as it stands today, but Task 11 inserts `requestsOn` and its five line comment directly above it, so by the time this task runs it is at `:30`. Write down that it has to go back to `"https://app.tex-cars.com"` before step 5.
+| Case | How to produce it | Expected |
+| - | - | - |
+| JavaScript working | Load `http://localhost:8000/book/` normally and walk to the send screen | The green anchor is visible with no button to press first, and its `href` is `https://wa.me/2975945454?text=` followed by the whole encoded seven line message with the car and dates you picked |
+| JavaScript disabled or broken | Turn JavaScript off in the browser and load `http://localhost:8000/book/` | The quiz is not shown, the `noscript` block is, and its Open WhatsApp button carries a real `wa.me` href |
 
-- [ ] **Step 3: Walk every row of the G1 case table**
+Then confirm, with JavaScript back on:
 
-For each row: reload `http://localhost:8000/book/`, complete the quiz (Hyundai i10, two future days, "Bring it to my hotel", note "Divi Village, arriving 11:00", name Monischa, phone `+297 560 1234`), then tap Send request once.
+- Open DevTools, Network, walk the quiz from the first step to the send screen. The only requests are the page itself, the four scripts, the three local stylesheets, the Google Fonts stylesheet and font files named in the head, and the car images. There is no XHR and no fetch of any kind, and **no request goes to `app.tex-cars.com`**.
+- Open DevTools, Application, and confirm Local Storage for `localhost:8000` holds only `tex_lang`, written by `i18n.js`, and that nothing under Cookies was written by this page.
+- No anchor anywhere on the page has a `target` attribute, tapping the send anchor navigates the same tab, and the console shows no uncaught error at any step.
+- Switch to NL on the send screen and read the anchor `href` again. The message must now be Dutch.
 
-| Restart the stub as | Expected status line | Expected button | Expected anchor href |
-| - | - | - | - |
-| `201` | "Sent. Now open WhatsApp so Tex sees it." | Send request hidden, green Open WhatsApp shown | `https://wa.me/2975945454?text=` with the full seven line message |
-| `201`, with the honeypot filled by hand in devtools (`document.getElementById('qWebsite').value = 'x'`) | same as above, deliberately | same | same |
-| `422` | "We could not save it here, so send it on WhatsApp instead. Nothing is lost." | same | same |
-| `429` | same failure line | same | same |
-| `400` | same failure line | same | same |
-| `500` | same failure line | same | same |
-| `hang` | same failure line, after about four seconds | same | same |
-| stub stopped entirely (offline) | same failure line, immediately | same | same |
-
-Then two more, without the stub:
-
-- Turn JavaScript off in the browser and load `http://localhost:8000/book/`. Expected: the quiz is not shown, the noscript block is, and its Open WhatsApp button carries a real `wa.me` href.
-- Turn JavaScript back on, set `requestsOn: false` in `site/data/config.js`, reload, and complete the quiz. Expected: no request reaches the stub log at all, the status line is the success line, and the anchor still opens WhatsApp. Set it back to `true`.
-
-Confirm on every row: the anchor has no `target` attribute, tapping it navigates the same tab, and the console shows no uncaught error.
-
-- [ ] **Step 4: Walk the device matrix**
+- [ ] **Step 3: Walk the device matrix**
 
 Serve the site on the local network (`python3 -m http.server 8000 --directory site --bind 0.0.0.0`) and open `http://<your LAN ip>:8000/book/`.
 
@@ -3087,69 +2787,64 @@ Serve the site on the local network (`python3 -m http.server 8000 --directory si
 | - | - | - |
 | iPhone, Safari, 375 px wide | Calendar day cells | Every cell is at least 44 px tall and seven columns fit without horizontal scroll |
 | iPhone, Safari | Whole page | The body never scrolls sideways at any step |
-| iPhone, Safari, Settings, Privacy, Block All Cookies on | Load the page, tap NL | The page loads, the language switches, the estimate re-renders in Dutch. Before Task 12 this was a blank Dutch site. |
-| iPhone, Instagram in app browser (paste the link into a DM to yourself and open it) | Tap Open WhatsApp on the send screen | WhatsApp opens with the message prefilled. This is the reason there is no `target="_blank"`. |
+| iPhone, Safari, Settings, Privacy, Block All Cookies on | Load the page, tap NL | The page loads, the language switches, the estimate re-renders in Dutch. Before Task 11 this was a blank Dutch site. |
+| iPhone, Instagram in app browser (paste the link into a DM to yourself and open it) | Tap the send anchor on the send screen | WhatsApp opens with the message prefilled. This is the reason there is no `target="_blank"`. |
 | iPhone, Facebook in app browser | Same | Same |
 | iPhone, phone timezone set to Amsterdam | Step 2, early morning Aruba time | Today in Aruba is tappable and not greyed out |
 | Android, Chrome | Phone field | The numeric telephone keypad opens, not the full alphabet keyboard |
 | Android, Chrome | Whole flow | Same as iPhone |
 | Desktop, Chrome, 1440 px | Step 2 | The two months sit side by side |
-| Desktop, Chrome | Keyboard only, Tab and Enter | Every step is reachable, the focus ring is visible, and the send button and the WhatsApp anchor both activate on Enter |
+| Desktop, Chrome | Keyboard only, Tab and Enter | Every step is reachable, the focus ring is visible, and the send anchor activates on Enter |
 | Desktop, Chrome, DevTools, Rendering, prefers-reduced-motion reduce | Step changes | No slide animation, everything still switches |
 | Desktop, Safari | Whole flow | Dates read the same as Chrome, no off by one day |
 
-- [ ] **Step 5: Put the config back and commit**
+- [ ] **Step 4: Confirm the working tree is still clean**
 
-Confirm `site/data/config.js` reads `bookingUrl: "https://app.tex-cars.com",` and `requestsOn: true,` again:
-
-```bash
-grep -n "bookingUrl\|requestsOn" /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/site/data/config.js
-git -C /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental diff --stat site/data/config.js
-```
-
-Expected: `bookingUrl` is the app URL, `requestsOn` is `true`, and `git diff` on `config.js` is empty.
+This task edits nothing, so it must leave nothing behind. Two files the whole plan never touches are checked by name, because an earlier draft of this task did edit one of them temporarily:
 
 ```bash
-node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/
-git -C /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental add tools/site-tests/stub-endpoint.mjs
-git -C /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental commit -m "tools: a stub endpoint for walking the G1 case table locally
-
-Answers any status, or hangs so the 4000 ms abort can be observed. Not
-shipped: tools/ is outside site/ and never reaches gh-pages."
+node --test /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/tools/site-tests/*.test.mjs
+git -C /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental status --short
+git -C /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental diff --stat site/data/config.js site/data/fleet.js
 ```
+
+Expected: 89 tests pass, `git status --short` prints nothing, and the `git diff --stat` on `config.js` and `fleet.js` prints nothing. There is no commit in this task, because there is nothing to commit.
 
 ---
 
-## Task 18: The copy review sheet for Tex
+## Task 17: The copy review sheet for Tex
 
 **Files:**
 - Create: `docs/QUIZ-COPY-FOR-APPROVAL.md`
 
 **Interfaces:**
-- Consumes: the literal strings written in Tasks 4, 5, 7, 9, 13 and 16.
+- Consumes: the literal strings written in Tasks 4, 5, 7, 9, 12 and 15.
 - Produces: nothing shipped. `docs/` is in the parent repo, not in `site/`, so this file never reaches the `gh-pages` tree.
 
-Spec launch blocker 5 asks Mo and Tex to approve "the customer facing copy in sections 4, 5 and 6". That covers the quiz steps, the estimate sentence and the send step, and those strings are copied from the spec verbatim. It does **not** cover the strings this plan had to invent because the spec did not write them out, and it does not cover the homepage rewrites in Task 16. Those are listed here so Tex can approve or rewrite the lot in one pass instead of finding them one at a time on a live site.
+Spec launch blocker 5 asks Mo and Tex to approve "the customer facing copy in sections 4, 5 and 6". That covers the quiz steps and the estimate sentence, and those strings are copied from the spec verbatim. It does **not** cover the strings this plan had to invent because the spec did not write them out, it does not cover the homepage rewrites in Task 15, and it no longer covers the consent line, because the spec's consent line described a save that does not happen and Task 5 replaced it. Everything in that category is listed here so Tex can approve or rewrite the lot in one pass instead of finding them one at a time on a live site.
 
-English and Dutch sit side by side. Spanish and Papiamento exist in the homepage markup for Task 16's three items, because that file's convention is four languages, but neither is in `SUPPORTED` (`i18n.js:12`) so neither renders today and neither is up for review here.
+English and Dutch sit side by side. Spanish and Papiamento exist in the homepage markup for Task 15's three items, because that file's convention is four languages, but neither is in `SUPPORTED` (`i18n.js:12`) so neither renders today and neither is up for review here.
 
 - [ ] **Step 1: Write the sheet**
 
 Create `docs/QUIZ-COPY-FOR-APPROVAL.md`. It has one table per group, each row being one string, with an English column, a Dutch column, and a column saying where it appears. The groups, in this order:
 
-1. **The quiz trust line.** The single line above the progress bar on `/book/`. English "Nothing is reserved until Tex confirms it on WhatsApp." Dutch "Er is niets gereserveerd tot Tex het op WhatsApp bevestigt." From Task 5, phrased for a customer from the admin inbox line in spec section 10.
-2. **The send screen heading.** English "Send it to Tex". Dutch "Stuur het naar Tex". From Task 5.
-3. **The six validation error strings, per language.** From the `T` table in Task 7 and used by `validateStep` in Task 9: `errCar`, `errDates`, `errSpan`, `errDelivery`, `errName`, `errPhone`. Note in the sheet that `errSpan` names the number ninety on purpose, so it stays honest with the server rule, and that the ninety day retention number in the consent line is a separate approval (spec blocker 4).
-4. **The two extra calendar hint states.** `hintStart` ("Tap your pick-up day." / "Tik je ophaaldag aan.") and `hintEnd` ("Now tap your return day." / "Tik nu je terugbrengdag aan."). The mis-tap line is spec copy and is not up for review; these two are not in the spec and are lifted from the Little John original.
-5. **The full Dutch WhatsApp message.** All seven rows from Task 4, written out as a block exactly as the customer's phone will show it, next to the English block from spec section 6. The English is spec copy and is shown only so the two can be compared; the Dutch is new.
-6. **The noscript copy.** The heading, the paragraph and the button label from the `q-noscript` block in Task 5, both languages.
-7. **The new call to action line on the homepage.** The one line of copy and the one button label that replace the retired inquiry form, from Task 13.
-8. **The three homepage rewrites from Task 16.** The "Message us" step line, the "What do I need to rent?" FAQ answer, and the "How do I pay?" FAQ question and answer. Show the old string and the new string in each row, so Tex can see what changed and why. Say in one line above the table that these three changed because the quiz no longer takes a reservation fee, no longer asks for licence details, and takes no payment.
+1. **The consent line, which is the most important row on the sheet.** English "This opens WhatsApp with your details ready to send. You press send yourself, and nothing is reserved until Tex confirms it." Dutch "Dit opent WhatsApp met je gegevens klaar om te versturen. Je drukt zelf op verzenden, en er is niets gereserveerd tot Tex het bevestigt." From Task 5. Say in one line above it what it replaced and why: the spec's version promised that Tex saves the customer's name and number and deletes them after ninety days, and the quiz saves nothing at all, so every one of those clauses would have been false on a live page. Say in a second line that there is deliberately no privacy policy link on the line any more, because nothing on the page is collected, kept or shared.
+2. **The quiz trust line.** The single line above the progress bar on `/book/`. English "Nothing is reserved until Tex confirms it on WhatsApp." Dutch "Er is niets gereserveerd tot Tex het op WhatsApp bevestigt." From Task 5.
+3. **The send screen heading and the send anchor label.** Heading "Send it to Tex" / "Stuur het naar Tex". Anchor "Send it on WhatsApp" / "Stuur het via WhatsApp". Both from Task 5. Note that the anchor is the last thing the customer taps on this site, so its wording is worth a second read.
+4. **The six validation error strings, per language.** From the `T` table in Task 7 and used by `validateStep` in Task 9: `errCar`, `errDates`, `errSpan`, `errDelivery`, `errName`, `errPhone`. Note in the sheet that `errSpan` names the number ninety on purpose, because ninety days is the longest rental this page will compose a message for.
+5. **The two extra calendar hint states.** `hintStart` ("Tap your pick-up day." / "Tik je ophaaldag aan.") and `hintEnd` ("Now tap your return day." / "Tik nu je terugbrengdag aan."). The mis-tap line is spec copy and is not up for review; these two are not in the spec and are lifted from the Little John original.
+6. **The full Dutch WhatsApp message.** All seven rows from Task 4, written out as a block exactly as the customer's phone will show it, next to the English block from spec section 6. The English is spec copy and is shown only so the two can be compared; the Dutch is new. Say in one line that this message is now the only record of the request, so anything missing from it is missing full stop.
+7. **The noscript copy.** The heading, the paragraph and the button label from the `q-noscript` block in Task 5, both languages.
+8. **The new call to action line on the homepage.** The one line of copy and the one button label that replace the retired inquiry form, from Task 12.
+9. **The three homepage rewrites from Task 15.** The "Message us" step line, the "What do I need to rent?" FAQ answer, and the "How do I pay?" FAQ question and answer. Show the old string and the new string in each row, so Tex can see what changed and why. Say in one line above the table that these three changed because the quiz no longer takes a reservation fee, no longer asks for licence details, and takes no payment.
 
 Two lines at the top of the sheet, before the first table:
 
-- What this is: every customer facing string this work invents. Everything the spec already wrote out verbatim is approved through spec blocker 5 and is not repeated here.
+- What this is: every customer facing string this work invents, plus the one string it had to rewrite. Everything the spec already wrote out verbatim and that still ships is approved through spec blocker 5 and is not repeated here.
 - How to use it: strike through anything wrong and write the replacement next to it. Each string names the task that has to change if the wording changes.
+
+Nothing on this sheet is about storage, retention or deletion, because the quiz stores nothing. Spec launch blockers 1, 2, 4, 6, 7, 8 and 9 all exist to protect stored personal data or the endpoint that receives it, and none of them applies to this build. Blocker 3, confirming the live WhatsApp number, is the one that matters more than ever: with no back office row, a wrong number means the request reaches nobody at all.
 
 - [ ] **Step 2: Check it against the code**
 
@@ -3157,7 +2852,7 @@ Every English and Dutch string in the sheet must be byte for byte what the plan 
 
 ```bash
 grep -n "hintStart\|hintEnd\|errCar\|errDates\|errSpan\|errDelivery\|errName\|errPhone" /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/site/scripts/quiz.js
-grep -n "q-trust\|q-noscript\|Send it to Tex\|Stuur het naar Tex" /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/site/book/index.html
+grep -n "q-trust\|q-noscript\|q-consent\|Send it to Tex\|Stuur het naar Tex\|qOpenWa" /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/site/book/index.html
 grep -n "inquiry__cta" -A 3 /Users/monischahieroms/Desktop/SaltyCode/03-Clients/saltycodestudio-clients/tex-cars-rental/site/index.html
 ```
 
@@ -3188,13 +2883,15 @@ Hand the rendered sheet to Mo as HTML rather than raw Markdown when it goes out 
 
 Things noticed while reading the real files that the spec does not cover. None of them is planned. They are recorded so nobody mistakes them for oversights.
 
-1. **The fleet card button still says "Book" and "Boek".** `site/scripts/main.js:100-102` renders `tr('bookOnline').split(' ')[0]`, which is "Book" in English and "Boek" in Dutch. After Task 14 those cards go to a request quiz, so the word is now slightly wrong. Spec section 11 names the label change for the three static anchors only, so the card label is untouched. Mo may want it changed to "Request"; that is a copy decision, not a bug fix.
+1. **The fleet card button still says "Book" and "Boek".** `site/scripts/main.js:100-102` renders `tr('bookOnline').split(' ')[0]`, which is "Book" in English and "Boek" in Dutch. After Task 13 those cards go to a request quiz, so the word is now slightly wrong. Spec section 11 names the label change for the three static anchors only, so the card label is untouched. Mo may want it changed to "Request"; that is a copy decision, not a bug fix.
 2. **The paused Spanish and Papiamento labels on the three call to action anchors are now stale.** `data-es` and `data-pap` still say "Reservar" and "Reservá" and their `data-book-*` variants still say "online". Neither language is in `SUPPORTED` (`i18n.js:12`), so nothing renders them today, and the spec names only `data-en`, `data-nl`, `data-book-en` and `data-book-nl`. If Spanish or Papiamento is ever re-enabled, these four attributes per anchor need a pass first.
 3. **`booking-bridge.js:24` rewrites every `wa.me` number on the page.** It is harmless after this work, because the quiz page does not load the bridge and the three repointed anchors are no longer `wa.me` links. Worth knowing if anyone adds a `wa.me` anchor with a `?text=` to the homepage later: the regex only replaces the number, so a prefilled text survives.
 4. **`site/scripts/main.js:7` still carries the comment "confirm live WhatsApp with owner" next to the fallback `2975945454`.** Launch blocker 3 in spec section 13 is exactly this. Not a code change, an owner confirmation.
 5. **The `T` micro translation table in `main.js:25-46` keeps keys that only the retired form used** (`sum`, `lblName`, `lblEmail`, `lblDates`, `lblCar`, `lblMsg`, `toBooking`). Left in place: it is data that `renderFleet` still reads other keys from, and pruning it is not in scope.
 6. **`.daterange`, `.form__msg` and the `#daycount` styles in `site/styles/main.css:222-235` are now unused.** Left in place; removing CSS is a cleanup the spec does not name.
 7. **The app repo has two migrate entry points.** `app/scripts/migrate.ts` is what `package.json:20` runs; `app/src/lib/db/migrate.ts` also exists. The spec cites the latter at section 14 step 6. That belongs to the app plan, not this one, and nothing in this plan touches either file.
+8. **`site/data/config.js:24` still carries `bookingUrl: "https://app.tex-cars.com"`.** After Task 13 nothing on the site builds a URL from it: `booking-bridge.js` still reads it for the `data-booking-href` anchors in the footer policy list, which are staying. It is left exactly as it is. Removing an unused key from a config file the bridge also reads would be a cleanup nobody asked for, and the key becomes load bearing again the day the desk side is built.
+9. **The desk side is not cancelled, it is deferred.** Spec sections 7, 8, 9, 10 and 12, spec guardrail G3, and spec launch blockers 1, 2, 4, 6, 7, 8 and 9 all describe the saved request path. None of it is built here, none of it is deleted from the spec, and nothing in this plan makes it harder to build later: the send screen already holds the complete request in one `state` object, so a future task adds a save alongside the anchor rather than rebuilding the quiz. When that day comes, the consent line in Task 5 becomes false again and has to be rewritten in the same commit.
 
 ## Appendix B: Ambiguities resolved while writing this plan
 
@@ -3205,14 +2902,14 @@ Each of these is a place the spec did not give a literal string or a literal rul
 3. **The recap row for delivery uses the sentence case labels**, the same strings as the step 3 buttons, because a recap is a list of what you chose, not a sentence.
 4. **The mis-tap reset is announced on both silent wipe paths.** The spec names the "at or before the current start" case. Tapping a third day when a range is already complete also wipes silently in the Little John original. Task 8 announces both with the same copy, which reads correctly for both. This is a superset of what the spec asks for, not a contradiction.
 5. **Calendar hint copy.** The spec gives the step helper line and the mis-tap line. The two other hint states are new: "Tap your pick-up day." / "Tik je ophaaldag aan." and "Now tap your return day." / "Tik nu je terugbrengdag aan." Both are lifted from the Little John original's own hint strings.
-6. **Validation error copy.** The spec gives no error strings. Task 9 defines five per language. The 90 day one names the number, so it stays honest with the server rule.
+6. **Validation error copy.** The spec gives no error strings. Task 9 defines five per language. The 90 day one names the number, so it stays honest with the rule the quiz itself enforces.
 7. **The maximum span error is separate from the generic dates error**, so a customer who wants four months is told why rather than being told to tap again.
-8. **`estimateCents` is omitted from the JSON rather than sent as `null`** when there is no estimate. The contract says optional integer. In practice validation makes this unreachable at send time.
-9. **The send screen heading** ("Send it to Tex" / "Stuur het naar Tex") and the trust line at the top of the quiz are new copy. The trust line reuses the wording of the admin inbox line from spec section 10, phrased for a customer.
-10. **The progress bar shows five dots, not four.** The send screen is a step the customer walks through, so hiding it from the progress bar would make the last dot lie.
-11. **Tests live in `tools/site-tests/`, outside `site/`.** The spec does not say where. Anything inside `site/` reaches the public `gh-pages` tree through the subtree push, so the tests would be published. `tools/` is not in `.gitignore`, so they stay version controlled.
-12. **`bookUrl` in `main.js` changes signature from `(params)` to `(slug)`.** Its only other call site was the inquiry form submit handler at `site/scripts/main.js:221`, so the form has to be retired first. That is why Task 13 retires the form and Task 14 changes the signature, and not the other way round: the reverse order would leave one commit in which submitting the homepage form navigates to `/book/?car=%5Bobject%20Object%5D`. Spec section 11 names the new return value, and after Task 13 there is no caller left that needs the old shape.
-13. **The homepage rewrites in Task 16 and the copy sheet in Task 18 are not from the spec.** They are the owner's decision of 2026-09-09. Task 16 changes only wording that makes a promise the quiz does not keep, and Task 18 gathers every invented string in one place because spec blocker 5 covers only sections 4, 5 and 6.
-14. **The stored estimate is priced from the clamped language.** Spec section 7 says `estimate_currency` is derived server side from `lang`, and spec section 5 gives the currency rule by language. It does not say which language the stored figure is priced in. Task 10 pins it to the clamped value the payload carries, because any other reading lets a florin number be stored labelled USD. `priceCfg` keeps its `pap` branch for what the page displays, exactly as spec section 5 asks.
+8. **The send screen heading** ("Send it to Tex" / "Stuur het naar Tex"), the anchor label ("Send it on WhatsApp" / "Stuur het via WhatsApp") and the trust line at the top of the quiz are new copy. The trust line reuses the wording of the admin inbox line from spec section 10, phrased for a customer.
+9. **The progress bar shows five dots, not four.** The send screen is a step the customer walks through, so hiding it from the progress bar would make the last dot lie.
+10. **Tests live in `tools/site-tests/`, outside `site/`.** The spec does not say where. Anything inside `site/` reaches the public `gh-pages` tree through the subtree push, so the tests would be published. `tools/` is not in `.gitignore`, so they stay version controlled.
+11. **`bookUrl` in `main.js` changes signature from `(params)` to `(slug)`.** Its only other call site was the inquiry form submit handler at `site/scripts/main.js:221`, so the form has to be retired first. That is why Task 12 retires the form and Task 13 changes the signature, and not the other way round: the reverse order would leave one commit in which submitting the homepage form navigates to `/book/?car=%5Bobject%20Object%5D`. Spec section 11 names the new return value, and after Task 12 there is no caller left that needs the old shape.
+12. **The homepage rewrites in Task 15 and the copy sheet in Task 17 are not from the spec.** They are the owner's decision of 2026-09-09. Task 15 changes only wording that makes a promise the quiz does not keep, and Task 17 gathers every invented string in one place because spec blocker 5 covers only sections 4, 5 and 6.
+13. **The consent line is rewritten rather than copied.** Spec section 6 gives a verbatim consent line, and every clause in it is about saving the customer's details and deleting them after ninety days. The owner's decision of 2026-09-10 removed the save, so shipping that sentence would have put a false statement about personal data on a live page. Task 5 writes a replacement that says only what happens: WhatsApp opens with the details ready, the customer presses send, and nothing is reserved until Tex confirms. Task 17 puts it in front of Tex, since a consent line is the one string on the page nobody should be allowed to approve by silence.
+14. **The privacy policy link is removed from the consent line, and not moved somewhere else on the page.** The page collects nothing, keeps nothing and shares nothing, so a policy link there would imply a collection notice that does not apply, and it would also make the quiz depend on a policy page that spec blocker 1 says is not published yet. The site's own footer policy list is unchanged and still links the policy for the surfaces that do involve the app.
 15. **`docs/QUIZ-COPY-FOR-APPROVAL.md` lives in `docs/`, not in `site/`.** The spec does not say where a copy sheet goes. `docs/` is in the parent repo and outside the subtree push, so a sheet with draft wording on it cannot reach the public site.
-16. **Three test additions that are not spec requirements but make one testable.** The call to action test in Task 13 counts one paragraph, one anchor and no heading, because "one line of copy and one button" is otherwise unenforceable in a repo with no build step. The `requestBody` test in Task 10 asserts the stored figure is the dollar one for `pap`, because the currency and the language agreeing is otherwise invisible. The two tests in Task 16 pin which claims changed and which "online" wording the owner kept, because that distinction is the whole point of the task.
+16. **Three test additions that are not spec requirements but make one testable.** The call to action test in Task 12 counts one paragraph, one anchor and no heading, because "one line of copy and one button" is otherwise unenforceable in a repo with no build step. The no-network test in Task 10 greps the shipped `quiz.js` for `fetch(`, `XMLHttpRequest`, `sendBeacon`, `localStorage` and `document.cookie`, because "this page stores nothing" is the entire design and is otherwise unenforceable. The two tests in Task 15 pin which claims changed and which "online" wording the owner kept, because that distinction is the whole point of the task.

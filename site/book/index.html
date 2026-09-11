@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Request a car | Tex Cars Aruba</title>
+  <meta name="description" content="Tell us which car and which days, and Tex answers you on WhatsApp. Four taps, nothing to pay, nothing reserved until Tex confirms." />
+  <meta name="theme-color" content="#2348C7" />
+  <link rel="canonical" href="https://tex-cars.com/book/" />
+
+  <meta property="og:title" content="Request a car | Tex Cars Aruba" />
+  <meta property="og:description" content="Four taps and Tex answers you on WhatsApp." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://tex-cars.com/book/" />
+  <!-- Absolute, because a crawler resolves og:image against nothing. -->
+  <meta property="og:image" content="https://tex-cars.com/assets/logo/LOGOCIRCLE_COLOUR.png" />
+
+  <link rel="icon" type="image/png" href="../assets/logo/favicon-white.png" />
+  <link rel="apple-touch-icon" href="../assets/logo/LOGOCIRCLE_WHITE.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="../styles/reset.css" />
+  <link rel="stylesheet" href="../styles/tokens.css" />
+  <link rel="stylesheet" href="../styles/main.css" />
+
+  <!-- With JavaScript off the quiz cannot render, so it steps aside for a
+       plain WhatsApp link that works on its own. -->
+  <noscript><style>.quiz { display: none; } .q-noscript { display: block; }</style></noscript>
+</head>
+<body class="lang-en">
+
+  <header class="header is-scrolled">
+    <div class="container">
+      <nav class="nav" aria-label="Main">
+        <a class="nav__logo" href="../index.html" aria-label="Tex Cars home">
+          <img src="../assets/logo/LOGOCIRCLE_COLOUR.png" alt="Tex Cars" />
+          <span>TEX<b>CARS</b></span>
+        </a>
+        <div class="nav__actions" style="margin-left:auto">
+          <!-- Static, always visible, no JavaScript involved. The other two
+               WhatsApp links on this page are both hidden until quiz.js runs:
+               the noscript one only appears with scripting off, and the send
+               anchor sits inside a .q-step that stays display:none until the
+               script activates it. So if quiz.js ever fails to load, this is
+               the only way left to reach Tex from the page that is now the
+               whole booking funnel. Deliberately a plain link and not the
+               floating green bubble, which is left off this page on purpose
+               so it cannot compete with the send button. -->
+          <a class="btn btn--wa" href="https://wa.me/2975945454"
+             data-en="WhatsApp" data-nl="WhatsApp">WhatsApp</a>
+          <div class="langs" role="group" aria-label="Language">
+            <button class="lang-btn" data-set-lang="en">EN</button>
+            <button class="lang-btn" data-set-lang="nl">NL</button>
+          </div>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main class="quiz-page">
+    <div class="container">
+
+      <div class="q-noscript">
+        <h1 data-en="Message Tex on WhatsApp" data-nl="Stuur Tex een bericht op WhatsApp">Message Tex on WhatsApp</h1>
+        <p data-en="This page needs JavaScript to build your request. Tap below and tell Tex which car and which days." data-nl="Deze pagina heeft JavaScript nodig om je aanvraag op te bouwen. Tik hieronder en vertel Tex welke auto en welke dagen.">This page needs JavaScript to build your request. Tap below and tell Tex which car and which days.</p>
+        <a class="btn btn--wa btn--lg" href="https://wa.me/2975945454?text=Hi%20Tex%2C%20I%27d%20like%20to%20rent%20a%20car."
+           data-en="Open WhatsApp" data-nl="Open WhatsApp">Open WhatsApp</a>
+      </div>
+
+      <div class="quiz">
+        <p class="q-trust"
+           data-en="Nothing is reserved until Tex confirms it on WhatsApp."
+           data-nl="Er is niets gereserveerd tot Tex het op WhatsApp bevestigt.">Nothing is reserved until Tex confirms it on WhatsApp.</p>
+
+        <div class="quiz-progress" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+
+        <!-- The DOM layer writes the active step's name in here on every
+             step change, so a screen reader announces the move even though
+             the visible heading swap between .q-step sections is silent. -->
+        <div class="visually-hidden" id="qStepAnnounce" aria-live="polite" aria-atomic="true"></div>
+
+        <!-- ============ STEP 1 - the car ============ -->
+        <section class="q-step is-active" data-validate="car" tabindex="-1" aria-labelledby="qTitleCar">
+          <h1 class="q-title" id="qTitleCar" data-en="Which car?" data-nl="Welke auto?">Which car?</h1>
+          <div class="q-card">
+            <div class="q-cars" id="qCars"></div>
+            <p class="q-error" role="alert"></p>
+            <div class="q-nav"><span></span><button type="button" class="btn btn--primary" data-next data-en="Continue" data-nl="Verder">Continue</button></div>
+          </div>
+        </section>
+
+        <!-- ============ STEP 2 - the dates ============ -->
+        <section class="q-step" data-validate="dates" tabindex="-1" aria-labelledby="qTitleDates">
+          <h1 class="q-title" id="qTitleDates" data-en="When do you need it?" data-nl="Wanneer heb je hem nodig?">When do you need it?</h1>
+          <p class="q-sub" data-en="Tap your pick-up day, then your return day." data-nl="Tik je ophaaldag aan, daarna je terugbrengdag.">Tap your pick-up day, then your return day.</p>
+          <div class="q-card">
+            <div class="cal2" id="qCal"></div>
+            <p class="q-error" role="alert"></p>
+            <div class="q-nav">
+              <button type="button" class="btn btn--ghost" data-back data-en="Back" data-nl="Terug">Back</button>
+              <button type="button" class="btn btn--primary" data-next data-en="Continue" data-nl="Verder">Continue</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ STEP 3 - the delivery preference ============ -->
+        <section class="q-step" data-validate="delivery" tabindex="-1" aria-labelledby="qTitleDelivery">
+          <h1 class="q-title" id="qTitleDelivery" data-en="Where would you like it?" data-nl="Waar wil je hem hebben?">Where would you like it?</h1>
+          <div class="q-card">
+            <!-- role=radiogroup/radio makes this a real single-choice group
+                 for screen readers instead of three unrelated buttons. The
+                 DOM layer must keep aria-checked in sync: "true" on the
+                 chosen button, "false" on the other two, whenever a choice
+                 is made. -->
+            <div class="q-opts" role="radiogroup" aria-labelledby="qTitleDelivery">
+              <button type="button" class="q-opt" role="radio" aria-checked="false" data-delivery="airport" data-en="Bring it to the airport" data-nl="Breng hem naar het vliegveld">Bring it to the airport</button>
+              <button type="button" class="q-opt" role="radio" aria-checked="false" data-delivery="hotel" data-en="Bring it to my hotel" data-nl="Breng hem naar mijn hotel">Bring it to my hotel</button>
+              <button type="button" class="q-opt" role="radio" aria-checked="false" data-delivery="pickup" data-en="I collect it at Tex" data-nl="Ik haal hem op bij Tex">I collect it at Tex</button>
+            </div>
+
+            <p class="q-notice"
+               data-en="This is a request, not a confirmed pick-up. Tex will tell you what works on WhatsApp."
+               data-nl="Dit is een verzoek, geen bevestigde afspraak. Tex laat je op WhatsApp weten wat kan.">This is a request, not a confirmed pick-up. Tex will tell you what works on WhatsApp.</p>
+
+            <label class="field q-field">
+              <span data-en="Anything about the drop-off? (optional)" data-nl="Iets over de aflevering? (optioneel)">Anything about the drop-off? (optional)</span>
+              <input type="text" id="qNote" maxlength="200" autocomplete="off"
+                     placeholder="Hotel name, flight number, time of day"
+                     data-en-placeholder="Hotel name, flight number, time of day"
+                     data-nl-placeholder="Hotelnaam, vluchtnummer, tijdstip" />
+              <small class="q-count" id="qNoteCount" hidden></small>
+            </label>
+
+            <p class="q-error" role="alert"></p>
+            <div class="q-nav">
+              <button type="button" class="btn btn--ghost" data-back data-en="Back" data-nl="Terug">Back</button>
+              <button type="button" class="btn btn--primary" data-next data-en="Continue" data-nl="Verder">Continue</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ STEP 4 - who to message ============ -->
+        <section class="q-step" data-validate="who" tabindex="-1" aria-labelledby="qTitleWho">
+          <h1 class="q-title" id="qTitleWho" data-en="Who should Tex message?" data-nl="Wie mag Tex een bericht sturen?">Who should Tex message?</h1>
+          <div class="q-card">
+            <label class="field q-field">
+              <span data-en="Your name" data-nl="Je naam">Your name</span>
+              <input type="text" id="qName" maxlength="60" autocomplete="name" />
+            </label>
+
+            <p class="q-error" role="alert"></p>
+            <div class="q-nav">
+              <button type="button" class="btn btn--ghost" data-back data-en="Back" data-nl="Terug">Back</button>
+              <button type="button" class="btn btn--primary" data-next data-en="Continue" data-nl="Verder">Continue</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ SEND ============ -->
+        <section class="q-step" data-validate="none" tabindex="-1" aria-labelledby="qTitleSend">
+          <h1 class="q-title" id="qTitleSend" data-en="Send it to Tex" data-nl="Stuur het naar Tex">Send it to Tex</h1>
+          <div class="q-card">
+            <ul class="q-recap">
+              <li><b data-en="Car" data-nl="Auto">Car</b><span id="rCar"></span></li>
+              <li><b data-en="From" data-nl="Van">From</b><span id="rFrom"></span></li>
+              <li><b data-en="Until" data-nl="Tot">Until</b><span id="rUntil"></span></li>
+              <li id="rEstRow"><b data-en="Estimate" data-nl="Schatting">Estimate</b><span id="rEst"></span></li>
+              <li><b data-en="Where" data-nl="Waar">Where</b><span id="rWhere"></span></li>
+              <li id="rNoteRow"><b data-en="Note" data-nl="Opmerking">Note</b><span id="rNote"></span></li>
+              <li><b data-en="Name" data-nl="Naam">Name</b><span id="rName"></span></li>
+            </ul>
+
+            <p class="q-estimate" id="qEstimate"></p>
+            <p class="q-deposit" id="qDeposit"></p>
+
+            <!-- The consent line says what actually happens and nothing more.
+                 Nothing on this page is saved, sent or stored, so there is no
+                 storage claim, no retention period and no privacy policy link
+                 to hang off a collection notice that does not apply. -->
+            <p class="q-consent"
+               data-en="This opens WhatsApp with your details ready to send. You press send yourself, and nothing is reserved until Tex confirms it."
+               data-nl="Dit opent WhatsApp met je gegevens klaar om te versturen. Je drukt zelf op verzenden, en er is niets gereserveerd tot Tex het bevestigt.">This opens WhatsApp with your details ready to send. You press send yourself, and nothing is reserved until Tex confirms it.</p>
+
+            <!-- One anchor, one tap, same tab, no target. The href here is a
+                 working fallback for JavaScript off; renderSend rewrites it
+                 from state every time this screen is drawn. -->
+            <a class="btn btn--wa btn--block btn--lg q-openwa" id="qOpenWa"
+               href="https://wa.me/2975945454?text=Hi%20Tex%2C%20I%27d%20like%20to%20rent%20a%20car."
+               data-en="Send it on WhatsApp" data-nl="Stuur het via WhatsApp">Send it on WhatsApp</a>
+
+            <div class="q-nav">
+              <button type="button" class="btn btn--ghost" data-back data-en="Back" data-nl="Terug">Back</button>
+              <span></span>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="../data/config.js"></script>
+  <script src="../data/fleet.js"></script>
+  <script src="../scripts/i18n.js"></script>
+  <script src="../scripts/quiz.js"></script>
+</body>
+</html>
